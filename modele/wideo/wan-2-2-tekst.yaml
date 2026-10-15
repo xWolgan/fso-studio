@@ -1,0 +1,55 @@
+id: wan-2-2-tekst
+ukryty: true
+nazwa: WAN 2.2 · tekst → wideo
+nazwy: {en: "WAN 2.2 · text → video", fr: "WAN 2.2 · texte → vidéo"}
+obszar: wideo
+kolejnosc: 50
+poradnik: wan-2-2
+licencja: Apache 2.0
+opis:
+  pl: "Wideo bez dźwięku z tekstu. Domyślnie 5 s — maksimum natywne modelu."
+  en: "Silent video from text. 5 s by default — the model's native maximum."
+  fr: "Vidéo sans son à partir d'un texte. 5 s par défaut — le maximum natif du modèle."
+uwagi:
+  pl: "Bez dźwięku. Natywnie 5 s przy 16 kl./s — dłuższe klipy tracą spójność. Do WAN jest najwięcej LoRA społeczności."
+  en: "No sound. Natively 5 s at 16 fps — longer clips lose coherence. WAN has the largest number of community LoRAs."
+  fr: "Sans son. Nativement 5 s à 16 i/s — les clips plus longs perdent en cohérence. WAN est le modèle qui compte le plus de LoRA de la communauté."
+backend: comfyui
+workflow: wideo/wan_2_2_tekst-na-wideo.api.json
+wyjscie: wideo
+parametry:
+  - id: prompt
+    typ: prompt
+    cel: ["@prompt_enc.text"]
+  - id: proporcje
+    typ: proporcje
+    domyslnie: "16:9"
+    opcje: ["16:9", "4:3", "1:1", "3:4", "9:16"]
+    megapiksele: 0.4
+    wielokrotnosc: 16
+    cel_szerokosc: ["@latent.width"]
+    cel_wysokosc: ["@latent.height"]
+  - id: dlugosc
+    typ: dlugosc
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 5
+    min: 1
+    max: 8
+    krok: 0.5
+    fps: 16
+    klatki: "16n+1"
+    cel_sekundy: ["@sekundy.value"]
+  - id: tryb
+    typ: tryb
+    etykieta: {pl: tryb, en: mode, fr: mode}
+    domyslnie: szybki
+    pomoc:
+      pl: "Szybki — LoRA lightx2v, 4 kroki (ok. 30 s). Jakość — 20 kroków (ok. 3,5 min)."
+      en: "Fast — lightx2v LoRA, 4 steps (about 30 s). Quality — 20 steps (about 3.5 min)."
+      fr: "Rapide — LoRA lightx2v, 4 étapes (env. 30 s). Qualité — 20 étapes (env. 3,5 min)."
+    opcje_cele:
+      szybki: {"@turbo.value": true}
+      jakosc: {"@turbo.value": false}
+  - id: seed
+    typ: seed
+    cel: ["@szum.noise_seed"]

@@ -1,0 +1,45 @@
+id: minimax-h3
+nazwa: MiniMax H3
+obszar: wideo
+kolejnosc: 10
+poradnik: minimax-h3
+licencja: {pl: "MiniMax H3 Community License (zgoda na UE — wniosek w toku)", en: "MiniMax H3 Community License (EU permission — request pending)", fr: "MiniMax H3 Community License (autorisation pour l’UE — demande en cours)"}
+opis:
+  pl: "Wideo z dźwiękiem stereo (dialogi, efekty, muzyka), do 15 s. Z samego tekstu, z pierwszą i/lub ostatnią klatką albo z inspiracjami: do 9 obrazów, 3 klipów wideo i 3 nagrań."
+  en: "Video with stereo sound (dialogue, effects, music), up to 15 s. From text alone, with a first and/or last frame, or with inspirations: up to 9 images, 3 video clips and 3 recordings."
+  fr: "Vidéo avec son stéréo (dialogues, effets, musique), jusqu'à 15 s. À partir du seul texte, avec une première et/ou une dernière image, ou avec des inspirations : jusqu'à 9 images, 3 clips vidéo et 3 enregistrements."
+uwagi:
+  pl: "Inspiracje przywołuj w prompcie ich znacznikami: <Picture 1>, <Video 1>, <Audio 1>… (widać je przy każdym pliku). Gdy podasz inspiracje, pierwsza/ostatnia klatka nie są używane. Ostatnia klatka poprzedniego klipu jako pierwsza = kontynuacja ujęcia."
+  en: "Refer to inspirations in the prompt by their tags: <Picture 1>, <Video 1>, <Audio 1>… (shown next to each file). With inspirations, the first/last frame are not used. The previous clip's last frame as the first frame continues the shot."
+  fr: "Dans le prompt, appelle les inspirations par leurs balises : <Picture 1>, <Video 1>, <Audio 1>… (affichées à côté de chaque fichier). Si tu fournis des inspirations, la première et la dernière image ne sont pas utilisées. La dernière image du clip précédent prise comme première image = continuité du plan."
+backend: comfyui
+wyjscie: wideo
+parametry_z: minimax-h3-fl2va
+zapas_api: [minimax-h3-api, wan-3, kling-3]   # zadanie > 10 min → uczestnik może wysłać to samo przez API (z budżetu)
+warianty:
+  - {model: minimax-h3-referencje, gdy: [obrazy]}
+  - {model: minimax-h3-referencje, gdy: [wideo]}
+  - {model: minimax-h3-referencje, gdy: [dzwieki]}
+  - {model: minimax-h3-fl2va, gdy: []}
+wejscia:
+  - id: klatka_start
+    typ: obraz
+    etykieta: {pl: pierwsza klatka (opcjonalnie), en: first frame (optional), fr: première image (facultatif)}
+  - id: klatka_koniec
+    typ: obraz
+    etykieta: {pl: ostatnia klatka (opcjonalnie), en: last frame (optional), fr: dernière image (facultatif)}
+  - id: obrazy
+    typ: obraz
+    wiele: 9
+    znacznik: "<Picture {n}>"
+    etykieta: {pl: inspiracje — obrazy (do 9), en: inspirations — images (up to 9), fr: "inspirations — images (jusqu'à 9)"}
+  - id: wideo
+    typ: wideo
+    wiele: 3
+    znacznik: "<Video {n}>"
+    etykieta: {pl: inspiracje — wideo 2–15 s (do 3), en: inspirations — video 2–15 s (up to 3), fr: "inspirations — vidéo 2–15 s (jusqu'à 3)"}
+  - id: dzwieki
+    typ: dzwiek
+    wiele: 3
+    znacznik: "<Audio {n}>"
+    etykieta: {pl: inspiracje — dźwięk (do 3), en: inspirations — audio (up to 3), fr: "inspirations — son (jusqu'à 3)"}

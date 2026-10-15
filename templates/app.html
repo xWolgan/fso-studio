@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ T['obszar.' ~ obszar] }} · {{ T.tytul }}{% endblock %}
+{% block crumb %}<span class="crumb">{{ T['obszar.' ~ obszar] }}</span>{% endblock %}
+{% block body %}
+<main class="app" id="app" data-obszar="{{ obszar }}">
+  <aside class="shots">
+    <h3>{{ T.ujecia }}</h3>
+    <div id="shots"></div>
+    <button class="btn quiet new" id="shot-new">+ {{ T.nowe_ujecie }}</button>
+    <p class="hint">{{ T.przenies_do }}</p>
+  </aside>
+  <section class="stage-col">
+    <div class="stage" id="stage"><span class="empty">{{ T.pusto }}</span></div>
+    <div class="strip">
+      <div class="strip-head">
+        <input type="text" id="q" placeholder="{{ T.szukaj }}" spellcheck="false">
+        <span class="toggle" id="scope"><a data-k="ujecie" class="on">{{ T.zakres_ujecie }}</a><a data-k="ja">{{ T.zakres_moje }}</a><a data-k="wszyscy">{{ T.zakres_wszyscy }}</a></span>
+        <button class="star-f" id="star-f" title="{{ T.tylko_wybrane }}">★</button>
+        <span class="sp"></span>
+        <button class="btn quiet" id="cmp-btn" style="display:none"></button>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+  </section>
+  <aside class="panel" id="panel">
+    <section class="sec gen">
+      <div class="focus-mini" id="focus-mini"></div>
+      <div class="cur-shot" id="cur-shot"></div>
+      <div id="form"></div>
+    </section>
+    <section class="sec sel"><h3>{{ T.wynik }}</h3><div id="sel-meta" class="meta"></div></section>
+    <section class="sec queue"><h3>{{ T.kolejka }}</h3><ul class="jobs" id="jobs"></ul></section>
+  </aside>
+</main>
+<script>window.MODELS = {{ models_json | safe }}; window.ALIASY = {{ aliasy_json | safe }};</script>
+{% endblock %}
+{% block scripts %}<script src="/static/app.js?v=18"></script>{% endblock %}

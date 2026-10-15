@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block top %}{% endblock %}
+{% block body %}
+<main class="login">
+  <form method="post" action="/login" autocomplete="off">
+    <h1>{{ T.tytul }}</h1>
+    <p>{{ T.login_podpowiedz }}</p>
+    <div class="row">
+      <input type="text" name="login" value="{{ wpisany or '' }}" autofocus spellcheck="false" autocapitalize="off">
+      <button class="btn primary" type="submit">{{ T.wejdz }}</button>
+    </div>
+    {% if blad %}<div class="err">{{ T.login_zly }}</div>{% endif %}
+    {% if zamkniete %}<div class="err">{{ T.login_zamkniete }}</div>{% endif %}
+    <p style="margin-top:28px">{% for j in jezyki %}{% if not loop.first %} · {% endif %}{% if j == lang %}<b>{{ j }}</b>{% else %}<a class="link" href="/jezyk/{{ j }}" title="{{ T['jezyk.' ~ j] }}">{{ j }}</a>{% endif %}{% endfor %}</p>
+  </form>
+</main>
+{% endblock %}

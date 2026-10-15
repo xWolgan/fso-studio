@@ -1,0 +1,31 @@
+id: ltx-2-3
+nazwa: LTX 2.3
+obszar: wideo
+zapas_api: [wan-3, kling-3]   # zadanie > 10 min → propozycja API
+kolejnosc: 40
+poradnik: ltx-2-3
+licencja: LTX-2 Community
+opis:
+  pl: "Wideo z dźwiękiem. Z samego tekstu, z pierwszą klatką, z pierwszą i ostatnią albo z pierwszą klatką i nagraniem (obraz rusza się do dźwięku)."
+  en: "Video with sound. From text, a first frame, first and last frames, or a first frame plus a recording (the image moves to the sound)."
+  fr: "Vidéo avec son. À partir du seul texte, d'une première image, d'une première et d'une dernière image, ou d'une première image et d'un enregistrement (l'image bouge au rythme du son)."
+backend: comfyui
+wyjscie: wideo
+parametry_z: ltx-2-3-tekst
+warianty:
+  - {model: ltx-2-3-obraz-dzwiek, gdy: [klatka_start, dzwiek], mapa: {klatka_start: obraz}}
+  - {model: ltx-2-3-klatki, gdy: [klatka_start, klatka_koniec]}
+  - {model: ltx-2-3-obraz, gdy: [klatka_start], mapa: {klatka_start: obraz}}
+  - {model: ltx-2-3-tekst, gdy: []}
+wejscia:
+  - id: klatka_start
+    typ: obraz
+    etykieta: {pl: pierwsza klatka (opcjonalnie), en: first frame (optional), fr: première image (facultatif)}
+  - id: klatka_koniec
+    typ: obraz
+    wymaga: [klatka_start]
+    etykieta: {pl: ostatnia klatka (opcjonalnie; razem z pierwszą), en: last frame (optional; with the first), fr: dernière image (facultatif ; avec la première)}
+  - id: dzwiek
+    typ: dzwiek
+    wymaga: [klatka_start]
+    etykieta: {pl: nagranie (opcjonalnie; razem z pierwszą klatką), en: recording (optional; with the first frame), fr: enregistrement (facultatif ; avec la première image)}

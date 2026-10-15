@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ T.tytul }} · {{ T.tablica }}{% endblock %}
+{% block top %}{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="/static/tablica.css?v=1">
+<main class="tablica">
+  <header class="tb-top">
+    <h1>{{ T.tytul }}</h1>
+    <span class="tb-sub" id="tb-sub"></span>
+    <span class="spacer"></span>
+    <span class="tb-zegar" id="tb-zegar"></span>
+  </header>
+  <section class="tb-maszyny" id="tb-maszyny"></section>
+  <div class="tb-kolumny">
+    <section>
+      <h2 id="tb-h-kolejka"></h2>
+      <ol class="tb-lista" id="tb-kolejka"></ol>
+    </section>
+    <section>
+      <h2 id="tb-h-ostatnie"></h2>
+      <ol class="tb-lista" id="tb-ostatnie"></ol>
+    </section>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}<script src="/static/tablica.js?v=2"></script>{% endblock %}

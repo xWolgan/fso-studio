@@ -1,0 +1,186 @@
+{
+ "35": {
+  "class_type": "SaveAudioAdvanced",
+  "inputs": {
+   "audio": [
+    "37:43",
+    0
+   ],
+   "filename_prefix": "audio/audio_minimax_music3",
+   "format": "mp3",
+   "format.quality": "V0"
+  },
+  "_meta": {
+   "title": "SaveAudioAdvanced"
+  }
+ },
+ "37:6": {
+  "class_type": "UNETLoader",
+  "inputs": {
+   "unet_name": "minimax_music3_dit_fp16.safetensors",
+   "weight_dtype": "default"
+  },
+  "_meta": {
+   "title": "UNETLoader"
+  }
+ },
+ "37:7": {
+  "class_type": "VAELoader",
+  "inputs": {
+   "vae_name": "minimax_music3_dav.safetensors"
+  },
+  "_meta": {
+   "title": "VAELoader"
+  }
+ },
+ "37:10": {
+  "class_type": "ConditioningZeroOut",
+  "inputs": {
+   "conditioning": [
+    "mm3",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "ConditioningZeroOut"
+  }
+ },
+ "37:15": {
+  "class_type": "EmptyMiniMaxMusic3LatentAudio",
+  "inputs": {
+   "seconds": [
+    "mm3",
+    1
+   ],
+   "batch_size": 1
+  },
+  "_meta": {
+   "title": "EmptyMiniMaxMusic3LatentAudio"
+  }
+ },
+ "37:9": {
+  "class_type": "KSampler",
+  "inputs": {
+   "model": [
+    "37:6",
+    0
+   ],
+   "seed": [
+    "seed_node",
+    0
+   ],
+   "steps": 30,
+   "cfg": 1.7,
+   "sampler_name": "euler",
+   "scheduler": "simple",
+   "positive": [
+    "mm3",
+    0
+   ],
+   "negative": [
+    "37:10",
+    0
+   ],
+   "latent_image": [
+    "37:15",
+    0
+   ],
+   "denoise": 1
+  },
+  "_meta": {
+   "title": "KSampler"
+  }
+ },
+ "37:12": {
+  "class_type": "VAEDecodeAudio",
+  "inputs": {
+   "samples": [
+    "37:9",
+    0
+   ],
+   "vae": [
+    "37:7",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "VAEDecodeAudio"
+  }
+ },
+ "37:42": {
+  "class_type": "VAEDecodeAudioTiled",
+  "inputs": {
+   "samples": [
+    "37:9",
+    0
+   ],
+   "vae": [
+    "37:7",
+    0
+   ],
+   "tile_size": 1536,
+   "overlap": 64
+  },
+  "_meta": {
+   "title": "VAEDecodeAudioTiled"
+  }
+ },
+ "37:43": {
+  "class_type": "ComfySwitchNode",
+  "inputs": {
+   "switch": true,
+   "on_false": [
+    "37:12",
+    0
+   ],
+   "on_true": [
+    "37:42",
+    0
+   ]
+  },
+  "_meta": {
+   "title": "ComfySwitchNode"
+  }
+ },
+ "mm3": {
+  "class_type": "MiniMaxMusic3TextEncode",
+  "inputs": {
+   "clip": [
+    "enkoder",
+    0
+   ],
+   "caption": "",
+   "lyrics": "[Intro]\n\n[Instrumental]\n\n[Instrumental]\n\n[Solo]\n\n[Outro]",
+   "seed": [
+    "seed_node",
+    0
+   ],
+   "max_duration": 60,
+   "cfg_scale": 1.7,
+   "top_k": 50
+  },
+  "_meta": {
+   "title": "MiniMaxMusic3TextEncode"
+  }
+ },
+ "seed_node": {
+  "class_type": "SeedNode",
+  "inputs": {
+   "seed": 197122968890040
+  },
+  "_meta": {
+   "title": "SeedNode"
+  }
+ },
+ "enkoder": {
+  "class_type": "CLIPLoader",
+  "inputs": {
+   "clip_name": "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+   "type": "minimax",
+   "device": "default"
+  },
+  "_meta": {
+   "title": "CLIPLoader"
+  }
+ }
+}

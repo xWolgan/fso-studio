@@ -1,0 +1,58 @@
+id: ace-step-1-5-xl
+nazwa: ACE-Step 1.5 XL
+obszar: muzyka
+kolejnosc: 10
+licencja: MIT
+opis:
+  pl: "Szybki i elastyczny — 30 s utworu w ok. 20 s. Instrumentalnie albo ze śpiewem (dobra dykcja, także po polsku)."
+  en: "Fast and flexible — 30 s of music in about 20 s. Instrumental or with vocals (good diction, also in Polish)."
+  fr: "Rapide et polyvalent — 30 s de musique en env. 20 s. Instrumental ou chanté (bonne diction, y compris en polonais)."
+uwagi:
+  pl: "Styl opisz tagami (gatunek, instrumenty, nastrój, tempo). Utwór instrumentalny — w polu „słowa” zostaw [Instrumental]."
+  en: "Describe the style with tags (genre, instruments, mood, tempo). For an instrumental piece leave [Instrumental] in \"lyrics\"."
+  fr: "Décris le style avec des tags (genre, instruments, ambiance, tempo). Pour un morceau instrumental, laisse [Instrumental] dans le champ « paroles »."
+backend: comfyui
+workflow: muzyka/ace_step_1_5_xl.api.json
+wyjscie: dzwiek
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: styl (tagi), en: style (tags), fr: style (tags)}
+    cel: ["@ace.tags"]
+  - id: slowa
+    typ: prompt
+    etykieta: {pl: słowa, en: lyrics, fr: paroles}
+    domyslnie: "[Instrumental]"
+    cel: ["@ace.lyrics"]
+  - id: dlugosc
+    typ: liczba
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 60
+    min: 10
+    max: 240
+    krok: 5
+    cel: ["@latent.seconds", "@ace.duration"]
+  - id: bpm
+    typ: liczba
+    etykieta: {pl: tempo (BPM), en: tempo (BPM), fr: tempo (BPM)}
+    domyslnie: 100
+    min: 40
+    max: 200
+    zaawansowane: true
+    cel: ["@ace.bpm"]
+  - id: tonacja
+    typ: tekst
+    etykieta: {pl: tonacja (np. E minor), en: key (e.g. E minor), fr: tonalité (par ex. E minor)}
+    domyslnie: "E minor"
+    zaawansowane: true
+    cel: ["@ace.keyscale"]
+  - id: jezyk
+    typ: wybor
+    etykieta: {pl: język śpiewu, en: vocal language, fr: langue du chant}
+    domyslnie: en
+    opcje: [en, pl, de, fr, es, it, ja, zh]
+    zaawansowane: true
+    cel: ["@ace.language"]
+  - id: seed
+    typ: seed
+    cel: ["@seed_node.value"]

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block body %}
+<main>
+  <nav class="areas">
+    {% for o in obszary %}
+    <a class="area-tile {{ '' if o in aktywne else 'off' }}" data-obszar="{{ o }}" href="/{{ o }}">
+      <h2>{{ T['obszar.' ~ o] }}</h2>
+      <div>
+        <p>{{ T['opis.' ~ o] }}</p>
+        {% if o not in aktywne %}<span class="soon">{{ T.wkrotce }}</span>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </nav>
+  <p class="home-foot"><a href="/galeria">{{ T.galeria }}</a></p>
+</main>
+{% endblock %}

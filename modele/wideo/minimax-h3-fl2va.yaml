@@ -1,0 +1,74 @@
+id: minimax-h3-fl2va
+ukryty: true
+nazwa: MiniMax H3
+obszar: wideo
+kolejnosc: 10
+licencja: MiniMax (otwarte wagi)
+opis:
+  pl: "Wideo z dźwiękiem stereo (dialogi, efekty, muzyka). Z samego tekstu albo z pierwszą i/lub ostatnią klatką. Do 15 s."
+  en: "Video with stereo sound (dialogue, effects, music). From text alone or with a first and/or last frame. Up to 15 s."
+  fr: "Vidéo avec son stéréo (dialogues, effets, musique). À partir du seul texte ou avec une première et/ou une dernière image. Jusqu'à 15 s."
+uwagi:
+  pl: "Pierwsza klatka = ostatnia klatka poprzedniego klipu daje kontynuację ujęcia. Dźwięk opisz w prompcie (np. sekcja „overall_soundscape”, „non_diegetic_music”)."
+  en: "Using the last frame of a previous clip as the first frame continues the shot. Describe sound in the prompt (e.g. the \"overall_soundscape\" or \"non_diegetic_music\" sections)."
+  fr: "Prendre la dernière image du clip précédent comme première image prolonge le plan. Décris le son dans le prompt (par ex. les sections « overall_soundscape », « non_diegetic_music »)."
+backend: comfyui
+workflow: wideo/h3_wideo.api.json
+wyjscie: wideo
+wejscia:
+  - id: klatka_start
+    typ: obraz
+    etykieta: {pl: pierwsza klatka (opcjonalnie), en: first frame (optional), fr: première image (facultatif)}
+    wymagane: false
+    cel: ["@klatka_start.image"]
+    jesli_brak_odlacz: ["klatka_start"]
+  - id: klatka_koniec
+    typ: obraz
+    etykieta: {pl: ostatnia klatka (opcjonalnie), en: last frame (optional), fr: dernière image (facultatif)}
+    wymagane: false
+    cel: ["@klatka_koniec.image"]
+    jesli_brak_odlacz: ["klatka_koniec"]
+parametry:
+  - id: prompt
+    typ: prompt
+    cel: ["@h3.prompt"]
+  - id: proporcje
+    typ: proporcje
+    domyslnie: "16:9"
+    opcje: ["16:9", "21:9", "4:3", "1:1", "3:4", "9:16"]
+    cel_selektor: ["@rozdzielczosc.aspect_ratio"]
+  - id: rozdzielczosc
+    typ: tryb
+    etykieta: {pl: rozdzielczość, en: resolution, fr: résolution}
+    domyslnie: "480p"
+    pomoc:
+      pl: "480p (ok. 0,4 MP) — szybko; 720p (ok. 0,9 MP) — wyraźnie dłużej i więcej pamięci. Otwarte wagi H3 obsługują do 768p."
+      en: "480p (about 0.4 MP) — fast; 720p (about 0.9 MP) — much slower and more memory. Open H3 weights support up to 768p."
+      fr: "480p (env. 0,4 MP) — rapide ; 720p (env. 0,9 MP) — nettement plus long et plus gourmand en mémoire. Les poids ouverts de H3 vont jusqu'à 768p."
+    opcje_cele:
+      "480p": {"@rozdzielczosc.megapixels": 0.4}
+      "720p": {"@rozdzielczosc.megapixels": 0.9}
+  - id: dlugosc
+    typ: dlugosc
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 10
+    min: 1
+    max: 15
+    krok: 0.5
+    fps: 24
+    klatki: "17n+5"
+    cel_sekundy: ["@sekundy.value"]
+  - id: tryb
+    typ: tryb
+    etykieta: {pl: tryb, en: mode, fr: mode}
+    domyslnie: szybki
+    pomoc:
+      pl: "Szybki — LoRA turbo (8 kroków). Jakość — 20 kroków, kilka razy dłużej."
+      en: "Fast — turbo LoRA (8 steps). Quality — 20 steps, several times slower."
+      fr: "Rapide — LoRA turbo (8 étapes). Qualité — 20 étapes, plusieurs fois plus long."
+    opcje_cele:
+      szybki: {"@turbo.value": true}
+      jakosc: {"@turbo.value": false}
+  - id: seed
+    typ: seed
+    cel: ["@szum.noise_seed"]

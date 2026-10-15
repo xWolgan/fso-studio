@@ -1,0 +1,37 @@
+id: yue-2
+nazwa: YuE 2
+obszar: muzyka
+kolejnosc: 20
+licencja: {pl: "CC-BY-NC (niekomercyjna)", en: "CC-BY-NC (non-commercial)", fr: "CC-BY-NC (non commerciale)"}
+opis:
+  pl: "Model piosenek z długą formą; tu domyślnie instrumentalnie. 30 s w ok. 1 min. Stereo 48 kHz."
+  en: "A song model for long-form pieces; instrumental by default here. 30 s in about 1 min. Stereo 48 kHz."
+  fr: "Modèle de chansons pour les formes longues ; ici, instrumental par défaut. 30 s en env. 1 min. Stéréo 48 kHz."
+uwagi:
+  pl: "Strukturę opisz sekcjami w polu „słowa” — [Intro], [Instrumental], [Solo], [Outro]; do piosenki wpisz tekst w sekcjach [Verse], [Chorus]. Z natury to model piosenek — sprawdź, czy wersja instrumentalna nie ma wokalu."
+  en: "Describe the structure with sections in \"lyrics\" — [Intro], [Instrumental], [Solo], [Outro]; for a song write the text in [Verse], [Chorus] sections. It is a song model by nature — check that the instrumental version has no vocals."
+  fr: "Décris la structure en sections dans le champ « paroles » — [Intro], [Instrumental], [Solo], [Outro] ; pour une chanson, écris le texte dans des sections [Verse], [Chorus]. C'est par nature un modèle de chansons — vérifie que la version instrumentale n'a pas de voix."
+backend: comfyui
+workflow: muzyka/yue2_tekst-na-muzyke.api.json
+wyjscie: dzwiek
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: styl, en: style, fr: style}
+    cel: ["@styl.value"]
+  - id: slowa
+    typ: prompt
+    etykieta: {pl: słowa / struktura, en: lyrics / structure, fr: paroles / structure}
+    domyslnie: "[Intro]\n\n[Instrumental]\n\n[Instrumental]\n\n[Solo]\n\n[Outro]"
+    cel: ["@slowa.value"]
+  - id: dlugosc
+    typ: liczba
+    etykieta: {pl: maks. długość (s), en: max length (s), fr: durée max. (s)}
+    domyslnie: 60
+    min: 10
+    max: 300
+    krok: 10
+    cel: ["@gen.max_duration"]
+  - id: seed
+    typ: seed
+    cel: ["@seed_node.seed"]

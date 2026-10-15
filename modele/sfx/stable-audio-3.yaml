@@ -1,0 +1,31 @@
+id: stable-audio-3
+nazwa: Stable Audio 3 small-SFX
+obszar: sfx
+kolejnosc: 20
+poradnik: stable-audio-3-sfx
+licencja: Stability AI Community (komercyjnie do 1 mln $ przychodu)
+opis:
+  pl: "Efekty, ambient, foley z opisu — stereo 44,1 kHz, do 2 min. 10 s w 1–2 s."
+  en: "Effects, ambience, foley from a description — stereo 44.1 kHz, up to 2 min. 10 s in 1–2 s."
+  fr: "Effets, ambiances, bruitages à partir d'une description — stéréo 44,1 kHz, jusqu'à 2 min. 10 s en 1–2 s."
+uwagi:
+  pl: "Opisz źródło dźwięku, materiał, odległość i przestrzeń (np. „kroki na żwirze, powolny marsz, blisko”). Poziom głośności nie jest normalizowany."
+  en: "Describe the sound source, material, distance and space (e.g. \"footsteps on gravel, slow walk, close\"). Loudness is not normalised."
+  fr: "Décris la source du son, la matière, la distance et l'espace (par ex. « pas sur du gravier, marche lente, proche »). Le volume n'est pas normalisé."
+backend: comfyui
+workflow: sfx/stable_audio_3_tekst-na-efekt.api.json
+wyjscie: dzwiek
+parametry:
+  - id: prompt
+    typ: prompt
+    cel: ["@prompt_enc.text"]
+  - id: dlugosc
+    typ: liczba
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 10
+    min: 1
+    max: 120
+    cel: ["@latent.seconds"]
+  - id: seed
+    typ: seed
+    cel: ["@ks.seed"]

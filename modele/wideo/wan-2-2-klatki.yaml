@@ -1,0 +1,67 @@
+id: wan-2-2-klatki
+ukryty: true
+nazwa: WAN 2.2 · pierwsza i ostatnia klatka
+nazwy: {en: "WAN 2.2 · first and last frame", fr: "WAN 2.2 · première et dernière image"}
+obszar: wideo
+kolejnosc: 52
+poradnik: wan-2-2
+licencja: Apache 2.0
+opis:
+  pl: "Przejście między pierwszą a ostatnią klatką, bez dźwięku. Domyślnie 5 s — maksimum natywne modelu."
+  en: "A transition between a first and a last frame, silent. 5 s by default — the model's native maximum."
+  fr: "Transition entre une première et une dernière image, sans son. 5 s par défaut — le maximum natif du modèle."
+uwagi:
+  pl: "Bez dźwięku. Natywnie 5 s przy 16 kl./s — dłuższe klipy tracą spójność. Do WAN jest najwięcej LoRA społeczności."
+  en: "No sound. Natively 5 s at 16 fps — longer clips lose coherence. WAN has the largest number of community LoRAs."
+  fr: "Sans son. Nativement 5 s à 16 i/s — les clips plus longs perdent en cohérence. WAN est le modèle qui compte le plus de LoRA de la communauté."
+backend: comfyui
+workflow: wideo/wan_2_2_pierwsza-i-ostatnia-klatka.api.json
+wyjscie: wideo
+wejscia:
+  - id: klatka_start
+    typ: obraz
+    etykieta: {pl: pierwsza klatka, en: first frame, fr: première image}
+    wymagane: true
+    cel: ["@klatka_start.image"]
+  - id: klatka_koniec
+    typ: obraz
+    etykieta: {pl: ostatnia klatka, en: last frame, fr: dernière image}
+    wymagane: true
+    cel: ["@klatka_koniec.image"]
+parametry:
+  - id: prompt
+    typ: prompt
+    cel: ["@prompt_enc.text"]
+  - id: proporcje
+    typ: proporcje
+    domyslnie: "16:9"
+    opcje: ["16:9", "4:3", "1:1", "3:4", "9:16"]
+    megapiksele: 0.4
+    wielokrotnosc: 16
+    cel_szerokosc: ["@latent.width"]
+    cel_wysokosc: ["@latent.height"]
+  - id: dlugosc
+    typ: dlugosc
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 5
+    min: 1
+    max: 8
+    krok: 0.25
+    fps: 16
+    klatki: "4n+1"
+    cel_klatki: ["@latent.length"]
+    cel_fps: ["@wideo.fps"]
+  - id: tryb
+    typ: tryb
+    etykieta: {pl: tryb, en: mode, fr: mode}
+    domyslnie: szybki
+    pomoc:
+      pl: "Szybki — LoRA lightx2v, 4 kroki (ok. 30 s). Jakość — 20 kroków (ok. 3,5 min)."
+      en: "Fast — lightx2v LoRA, 4 steps (about 30 s). Quality — 20 steps (about 3.5 min)."
+      fr: "Rapide — LoRA lightx2v, 4 étapes (env. 30 s). Qualité — 20 étapes (env. 3,5 min)."
+    opcje_cele:
+      szybki: {_workflow: wideo/wan_2_2_pierwsza-i-ostatnia-klatka.api.json}
+      jakosc: {_workflow: wideo/wan_2_2_pierwsza-i-ostatnia-klatka_jakosc.api.json}
+  - id: seed
+    typ: seed
+    cel: ["@szum.noise_seed"]

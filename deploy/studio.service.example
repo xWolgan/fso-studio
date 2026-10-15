@@ -1,0 +1,14 @@
+# Studio jako usługa systemd (Linux). Podmień UZYTKOWNIK i ścieżkę, skopiuj do /etc/systemd/system/studio.service,
+# potem: sudo systemctl daemon-reload && sudo systemctl enable --now studio
+[Unit]
+Description=Studio (GUI do generowania z AI)
+After=network-online.target
+
+[Service]
+User=UZYTKOWNIK
+WorkingDirectory=/home/UZYTKOWNIK/fso-studio
+ExecStart=/home/UZYTKOWNIK/fso-studio/.venv/bin/uvicorn studio.main:app --host 127.0.0.1 --port 8100
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

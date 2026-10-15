@@ -1,0 +1,59 @@
+id: fasth3-v2
+nazwa: FastH3 V2
+obszar: wideo
+zapas_api: [wan-3, kling-3]   # zadanie > 10 min → propozycja API
+kolejnosc: 20
+licencja: MiniMax (otwarte wagi)
+opis:
+  pl: "Destylowany H3 (8 kroków), z dźwiękiem. Na Sparku zwykle nieco wolniejszy niż MiniMax H3 w trybie szybkim — do porównań."
+  en: "Distilled H3 (8 steps), with sound. On the Spark usually a bit slower than MiniMax H3 in fast mode — for comparison."
+  fr: "H3 distillé (8 étapes), avec son. Sur le Spark, en général un peu plus lent que MiniMax H3 en mode rapide — pour comparer."
+backend: comfyui
+workflow: wideo/fasth3_wideo.api.json
+wyjscie: wideo
+wejscia:
+  - id: klatka_start
+    typ: obraz
+    etykieta: {pl: pierwsza klatka (opcjonalnie), en: first frame (optional), fr: première image (facultatif)}
+    wymagane: false
+    cel: ["@klatka_start.image"]
+    jesli_brak_odlacz: ["klatka_start"]
+  - id: klatka_koniec
+    typ: obraz
+    etykieta: {pl: ostatnia klatka (opcjonalnie), en: last frame (optional), fr: dernière image (facultatif)}
+    wymagane: false
+    cel: ["@klatka_koniec.image"]
+    jesli_brak_odlacz: ["klatka_koniec"]
+parametry:
+  - id: prompt
+    typ: prompt
+    cel: ["@h3.prompt"]
+  - id: proporcje
+    typ: proporcje
+    domyslnie: "16:9"
+    opcje: ["16:9", "21:9", "4:3", "1:1", "3:4", "9:16"]
+    cel_selektor: ["@rozdzielczosc.aspect_ratio"]
+  - id: rozdzielczosc
+    typ: tryb
+    etykieta: {pl: rozdzielczość, en: resolution, fr: résolution}
+    domyslnie: "480p"
+    pomoc:
+      pl: "480p (ok. 0,4 MP) — szybko; 720p (ok. 0,9 MP) — wyraźnie dłużej i więcej pamięci. Otwarte wagi H3 obsługują do 768p."
+      en: "480p (about 0.4 MP) — fast; 720p (about 0.9 MP) — much slower and more memory. Open H3 weights support up to 768p."
+      fr: "480p (env. 0,4 MP) — rapide ; 720p (env. 0,9 MP) — nettement plus long et plus gourmand en mémoire. Les poids ouverts de H3 vont jusqu'à 768p."
+    opcje_cele:
+      "480p": {"@rozdzielczosc.megapixels": 0.4}
+      "720p": {"@rozdzielczosc.megapixels": 0.9}
+  - id: dlugosc
+    typ: dlugosc
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 10
+    min: 1
+    max: 15
+    krok: 0.5
+    fps: 24
+    klatki: "17n+5"
+    cel_sekundy: ["@sekundy.value"]
+  - id: seed
+    typ: seed
+    cel: ["@szum.noise_seed"]

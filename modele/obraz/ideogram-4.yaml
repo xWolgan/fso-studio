@@ -1,0 +1,57 @@
+id: ideogram-4
+nazwa: Ideogram 4
+obszar: obraz
+kolejnosc: 30
+licencja: Ideogram 4 Non-Commercial
+opis:
+  pl: Mocny w typografii i napisach w obrazie. Ok. 40 s w profilu domyślnym.
+  en: Strong at typography and text in images. About 40 s with the default profile.
+  fr: "Excellent en typographie et pour le texte dans l'image. Env. 40 s avec le profil par défaut."
+uwagi:
+  pl: Model był trenowany na opisach w strukturze JSON. Zwykły, krótki prompt potrafi dać „halucynację” (np. narysowany fałszywy komunikat o filtrze). Przycisk „szablon” wstawia pusty szkielet (dla fotografii zamień `art_style` na `photo` przed `medium`; bbox to [y_min, x_min, y_max, x_max] w skali 0–1000). Szczegóły w poradniku.
+  en: The model was trained on descriptions structured as JSON. A plain short prompt can produce a "hallucination" (e.g. a drawn fake filter message). The "template" button inserts an empty structure (for photography replace `art_style` with `photo` before `medium`; bbox is [y_min, x_min, y_max, x_max] on a 0–1000 scale). See the guide.
+  fr: "Le modèle a été entraîné sur des descriptions structurées en JSON. Un prompt simple et court peut produire une « hallucination » (par ex. un faux message de filtre dessiné dans l'image). Le bouton « modèle » insère un squelette vide (pour une photo, remplace `art_style` par `photo` avant `medium` ; bbox correspond à [y_min, x_min, y_max, x_max] sur une échelle de 0 à 1000). Détails dans le guide."
+backend: comfyui
+workflow: obraz/ideogram4_tekst-na-obraz.api.json
+wyjscie: obraz
+parametry:
+  - id: prompt
+    typ: prompt
+    json: true
+    cel: ["@98:24.text"]
+    szablon: |
+      {
+        "high_level_description": "",
+        "style_description": {
+          "aesthetics": "",
+          "lighting": "",
+          "medium": "",
+          "art_style": "",
+          "color_palette": ["#RRGGBB"]
+        },
+        "compositional_deconstruction": {
+          "background": "",
+          "elements": [
+            {"type": "obj", "bbox": [0, 0, 1000, 1000], "desc": "", "color_palette": ["#RRGGBB"]},
+            {"type": "text", "bbox": [0, 0, 1000, 1000], "text": "", "desc": "", "color_palette": ["#RRGGBB"]}
+          ]
+        }
+      }
+  - id: proporcje
+    typ: proporcje
+    domyslnie: "16:9"
+    opcje: ["16:9", "21:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"]
+    megapiksele: 1.0
+    cel_selektor: ["@37.aspect_ratio"]
+    cel_megapiksele: ["@37.megapixels"]
+  - id: tryb
+    typ: tryb
+    etykieta: {pl: profil, en: profile, fr: profil}
+    domyslnie: domyslny
+    opcje_cele:
+      szybki: {"@98:156.choice": Turbo}
+      domyslny: {"@98:156.choice": Default}
+      jakosc: {"@98:156.choice": Quality}
+  - id: seed
+    typ: seed
+    cel: ["@98:18.noise_seed"]

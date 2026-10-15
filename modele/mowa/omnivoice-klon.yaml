@@ -1,0 +1,53 @@
+id: omnivoice-klon
+nazwa: OmniVoice · klonowanie głosu
+nazwy: {en: "OmniVoice · voice cloning", fr: "OmniVoice · clonage de voix"}
+obszar: mowa
+kolejnosc: 11
+poradnik: omnivoice
+licencja: {pl: "CC-BY-NC (niekomercyjna)", en: "CC-BY-NC (non-commercial)", fr: "CC-BY-NC (non commerciale)"}
+opis:
+  pl: "Mowa głosem z nagrania. Wystarczy kilka–kilkanaście sekund czystej próbki i jej dokładna transkrypcja."
+  en: "Speech in the voice from a recording. A few to about fifteen seconds of a clean sample plus its exact transcript are enough."
+  fr: "Une voix reprise d'un enregistrement. Il suffit de quelques secondes (jusqu'à une quinzaine) d'un échantillon propre et de sa transcription exacte."
+uwagi:
+  pl: "Transkrypcja jest konieczna — bez niej model zwraca ciszę. Klonuj tylko głosy, do których masz zgodę."
+  en: "The transcript is required — without it the model returns silence. Only clone voices you have consent for."
+  fr: "La transcription est obligatoire — sans elle, le modèle renvoie du silence. Ne clone que des voix pour lesquelles tu as l'accord de la personne."
+backend: comfyui
+workflow: mowa/omnivoice_klonowanie-glosu.api.json
+wyjscie: dzwiek
+wejscia:
+  - id: probka
+    typ: dzwiek
+    etykieta: {pl: próbka głosu, en: voice sample, fr: échantillon de voix}
+    wymagane: true
+    cel: ["@probka.audio"]
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: tekst do wypowiedzenia, en: text to speak, fr: texte à prononcer}
+    cel: ["@tts.text"]
+  - id: transkrypcja
+    typ: tekst
+    etykieta: {pl: transkrypcja próbki (wymagana), en: sample transcript (required), fr: "transcription de l'échantillon (obligatoire)"}
+    wymagane: true
+    domyslnie: ""
+    cel: ["@glos.reference_text"]
+  - id: jezyk
+    typ: wybor
+    etykieta: {pl: język, en: language, fr: langue}
+    domyslnie: Polish
+    opcje: [Polish, English, German, French, Spanish, Italian, Ukrainian, Czech, Russian, Chinese, Japanese]
+    cel: ["@silnik.language"]
+  - id: tempo
+    typ: ulamek
+    etykieta: {pl: tempo mowy, en: speech rate, fr: débit de parole}
+    domyslnie: 1.0
+    min: 0.5
+    max: 2.0
+    krok: 0.05
+    cel: ["@silnik.speed"]
+  - id: seed
+    typ: seed
+    max: 4294967295
+    cel: ["@seed_src.value"]

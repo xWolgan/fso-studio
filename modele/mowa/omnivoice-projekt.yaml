@@ -1,0 +1,72 @@
+id: omnivoice-projekt
+nazwa: OmniVoice · projektowanie głosu
+nazwy: {en: "OmniVoice · voice design", fr: "OmniVoice · conception de voix"}
+obszar: mowa
+kolejnosc: 12
+poradnik: omnivoice
+licencja: {pl: "CC-BY-NC (niekomercyjna)", en: "CC-BY-NC (non-commercial)", fr: "CC-BY-NC (non commerciale)"}
+opis:
+  pl: "Nowy głos z opisu cech (płeć, wiek, wysokość, szept, akcent), a potem wypowiedź tym głosem. Zapisuje próbkę głosu i wypowiedź."
+  en: "A new voice from a description of traits (gender, age, pitch, whisper, accent), then speech in that voice. Saves the voice sample and the speech."
+  fr: "Une nouvelle voix à partir de ses caractéristiques (genre, âge, hauteur, chuchotement, accent), puis ton texte dit avec cette voix. Enregistre l'échantillon de voix et le texte prononcé."
+uwagi:
+  pl: "Wybierz cechy głosu poniżej — model zna tylko tę listę. Bogatszy, opisowy głos: Breeze (po angielsku)."
+  en: "Pick the voice traits below — the model only knows this list. For a richer, described voice: Breeze (English)."
+  fr: "Choisis les caractéristiques de la voix ci-dessous — le modèle ne connaît que cette liste. Pour une voix plus riche, décrite librement : Breeze (en anglais)."
+backend: comfyui
+workflow: mowa/omnivoice_projektowanie-glosu.api.json
+wyjscie: dzwiek
+wyjscia:            # najpierw mowa z Twoim tekstem, potem wzorzec głosu (czyta tekst próbki)
+  - {wezel: "6"}
+  - {wezel: "5", dopisek: wzorzec}
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: tekst do wypowiedzenia, en: text to speak, fr: texte à prononcer}
+    cel: ["@tts.text"]
+  - id: opis_glosu
+    typ: cechy
+    etykieta: {pl: cechy głosu, en: voice traits, fr: caractéristiques de la voix}
+    domyslnie: "female, middle-aged, low pitch"
+    pomoc:
+      pl: "OmniVoice zna tylko te cechy (z każdej grupy najwyżej jedna; pusta grupa = model wybiera sam). Akcent dotyczy mowy po angielsku."
+      en: "OmniVoice only knows these traits (at most one per group; an empty group = the model decides). Accent applies to English speech."
+      fr: "OmniVoice ne connaît que ces caractéristiques (une au maximum par groupe ; groupe vide = le modèle choisit lui-même). L'accent ne concerne que la voix en anglais."
+    grupy:
+      - etykieta: {pl: płeć, en: gender, fr: genre}
+        opcje: [{v: male, pl: mężczyzna, en: male, fr: homme}, {v: female, pl: kobieta, en: female, fr: femme}]
+      - etykieta: {pl: wiek, en: age, fr: âge}
+        opcje: [{v: child, pl: dziecko, en: child, fr: enfant}, {v: teenager, pl: nastolatek, en: teenager, fr: adolescent}, {v: young adult, pl: młody dorosły, en: young adult, fr: jeune adulte},
+                {v: middle-aged, pl: w średnim wieku, en: middle-aged, fr: "d'âge moyen"}, {v: elderly, pl: starszy, en: elderly, fr: âgé}]
+      - etykieta: {pl: wysokość głosu, en: pitch, fr: hauteur de la voix}
+        opcje: [{v: very low pitch, pl: bardzo niski, en: very low, fr: très grave}, {v: low pitch, pl: niski, en: low, fr: grave}, {v: moderate pitch, pl: średni, en: moderate, fr: moyenne},
+                {v: high pitch, pl: wysoki, en: high, fr: aiguë}, {v: very high pitch, pl: bardzo wysoki, en: very high, fr: très aiguë}]
+      - etykieta: {pl: sposób, en: style, fr: style}
+        opcje: [{v: whisper, pl: szept, en: whisper, fr: chuchotement}]
+      - etykieta: {pl: akcent (angielski), en: accent (English), fr: accent (anglais)}
+        opcje: [{v: american accent, pl: amerykański, en: American, fr: américain}, {v: british accent, pl: brytyjski, en: British, fr: britannique},
+                {v: australian accent, pl: australijski, en: Australian, fr: australien}, {v: canadian accent, pl: kanadyjski, en: Canadian, fr: canadien},
+                {v: indian accent, pl: indyjski, en: Indian, fr: indien}, {v: chinese accent, pl: chiński, en: Chinese, fr: chinois},
+                {v: korean accent, pl: koreański, en: Korean, fr: coréen}, {v: japanese accent, pl: japoński, en: Japanese, fr: japonais},
+                {v: portuguese accent, pl: portugalski, en: Portuguese, fr: portugais}, {v: russian accent, pl: rosyjski, en: Russian, fr: russe}]
+    cel: ["@projektant.voice_instruction"]
+  - id: tekst_probki
+    typ: tekst
+    etykieta: {pl: tekst próbki głosu, en: voice sample text, fr: "texte de l'échantillon de voix"}
+    domyslnie: {pl: "To jest próbka nowego głosu. Mówię spokojnie i wyraźnie.", en: "This is a sample of the new voice. I speak calmly and clearly.", fr: "Voici un échantillon de la nouvelle voix. Je parle calmement et distinctement."}
+    pomoc:
+      pl: "Tym zdaniem model najpierw „przesłuchuje” nowy głos (wynik z dopiskiem „wzorzec”), a potem tym głosem mówi Twój tekst."
+      en: "The model first auditions the new voice with this sentence (the result marked “wzorzec”), then speaks your text with it."
+      fr: "Le modèle « auditionne » d'abord la nouvelle voix avec cette phrase (le résultat marqué « wzorzec »), puis dit ton texte avec cette voix."
+    zaawansowane: true
+    cel: ["@projektant.reference_text"]
+  - id: jezyk
+    typ: wybor
+    etykieta: {pl: język, en: language, fr: langue}
+    domyslnie: Polish
+    opcje: [Polish, English, German, French, Spanish, Italian, Ukrainian, Czech, Russian, Chinese, Japanese]
+    cel: ["@silnik_projekt.language", "@silnik.language"]
+  - id: seed
+    typ: seed
+    max: 4294967295
+    cel: ["@seed_src.value"]

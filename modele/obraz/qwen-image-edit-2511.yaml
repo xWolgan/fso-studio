@@ -1,0 +1,43 @@
+id: qwen-image-edit-2511
+nazwa: Qwen-Image-Edit 2511
+obszar: obraz
+kolejnosc: 40
+licencja: Apache 2.0
+opis:
+  pl: Edycja obrazu poleceniem. Do dwóch obrazów wejściowych (np. scena i materiał/postać).
+  en: Image editing by instruction. Up to two input images (e.g. scene and material/character).
+  fr: "Retouche d'image par instruction. Jusqu'à deux images d'entrée (par ex. une scène et une matière/un personnage)."
+backend: comfyui
+workflow: obraz/qwenedit2511_edycja-obrazu.api.json
+wyjscie: obraz
+wejscia:
+  - id: obraz1
+    typ: obraz
+    etykieta: {pl: obraz 1, en: image 1, fr: image 1}
+    wymagane: true
+    cel: ["@41.image"]
+  - id: obraz2
+    typ: obraz
+    etykieta: {pl: obraz 2 (opcjonalnie), en: image 2 (optional), fr: image 2 (facultatif)}
+    wymagane: false
+    cel: ["@83.image"]
+    jesli_brak_odlacz: ["83"]
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: polecenie, en: instruction, fr: instruction}
+    cel: ["@170:151.prompt"]
+  - id: tryb
+    typ: tryb
+    etykieta: {pl: tryb, en: mode, fr: mode}
+    domyslnie: szybki
+    pomoc:
+      pl: Szybki (ok. 30 s) używa LoRA Lightning, 4 kroki. Jakość (ok. 7 min) — 40 kroków.
+      en: Fast (about 30 s) uses the Lightning LoRA, 4 steps. Quality (about 7 min) — 40 steps.
+      fr: "Rapide (env. 30 s) utilise la LoRA Lightning, 4 étapes. Qualité (env. 7 min) — 40 étapes."
+    opcje_cele:
+      szybki: {"@170:168.value": true}
+      jakosc: {"@170:168.value": false}
+  - id: seed
+    typ: seed
+    cel: ["@170:169.seed"]

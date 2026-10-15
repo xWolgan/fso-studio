@@ -1,0 +1,67 @@
+id: kling-3-omni-wideo
+nazwa: Kling 3.0 Omni · referencja wideo · API
+nazwy: {en: "Kling 3.0 Omni · video reference · API", fr: "Kling 3.0 Omni · référence vidéo · API"}
+obszar: wideo
+kolejnosc: 31
+licencja: {pl: "Kling (usługa komercyjna, przez HiggsField)", en: "Kling (commercial service, via HiggsField)", fr: "Kling (service commercial, via HiggsField)"}
+opis:
+  pl: "Kling 3.0 Omni (O3) przez API (HiggsField), 3–10 s. Nowe ujęcie prowadzone klipem wideo (ruch, kamera, styl) i opisem, opcjonalnie z obrazami-referencjami (do 4). Bez dźwięku. Każda generacja schodzi z Twojego budżetu."
+  en: "Kling 3.0 Omni (O3) via API (HiggsField), 3–10 s. A new shot guided by a video clip (motion, camera, style) and a description, optionally with reference images (up to 4). No sound. Every generation is paid from your budget."
+  fr: "Kling 3.0 Omni (O3) via API (HiggsField), 3–10 s. Un nouveau plan guidé par un clip vidéo (mouvement, caméra, style) et une description, éventuellement avec des images de référence (jusqu'à 4). Sans son. Chaque génération est décomptée de ton budget."
+uwagi:
+  pl: "Klip przywołuj w prompcie jako @Video1, obrazy jako @Image1, @Image2… (np. „@Image1 idzie jak postać z @Video1”). Wideo: MP4. Dostawca moderuje treść — odrzucone zadanie nie kosztuje."
+  en: "Refer to the clip in the prompt as @Video1 and to images as @Image1, @Image2… (e.g. “@Image1 walks like the figure in @Video1”). Video: MP4. The provider moderates content — a rejected job costs nothing."
+  fr: "Dans le prompt, désigne le clip par @Video1 et les images par @Image1, @Image2… (par ex. « @Image1 marche comme la silhouette de @Video1 »). Vidéo : MP4. Le fournisseur modère le contenu — une tâche refusée ne coûte rien."
+backend: api
+dostawca: higgsfield
+wyjscie: wideo
+endpointy:
+  - {endpoint: kling-video/o3/video-reference, gdy: [wideo], wejscia: [wideo, obrazy]}
+cena:                     # USD za sekundę wyniku — wycena HiggsField (/estimate) 15.10.2026, rabat 50% do ok. 21.10; potem 2×
+  wg: rozdzielczosc
+  usd_s: {"720p": 0.063, "1080p": 0.084}
+wejscia:
+  - id: wideo
+    typ: wideo
+    wiele: 1
+    wymagane: true
+    znacznik: "@Video{n}"
+    cel: video_urls
+    etykieta: {pl: klip wideo MP4 (referencja), en: MP4 video clip (reference), fr: clip vidéo MP4 (référence)}
+  - id: obrazy
+    typ: obraz
+    wiele: 4
+    znacznik: "@Image{n}"
+    cel: image_urls
+    etykieta: {pl: referencje — obrazy (opcjonalnie, do 4), en: references — images (optional, up to 4), fr: "références — images (facultatif, jusqu'à 4)"}
+parametry:
+  - id: prompt
+    typ: prompt
+    wymagane: true
+    cel: [prompt]
+  - id: proporcje
+    typ: wybor
+    etykieta: {pl: proporcje, en: aspect ratio, fr: format}
+    domyslnie: "16:9"
+    opcje: ["16:9", "9:16", "1:1"]
+    cel: [aspect_ratio]
+  - id: rozdzielczosc
+    typ: tryb
+    etykieta: {pl: rozdzielczość, en: resolution, fr: résolution}
+    domyslnie: "720p"
+    pomoc:
+      pl: "720p — Standard; 1080p — Pro (droższy)."
+      en: "720p — Standard; 1080p — Pro (more expensive)."
+      fr: "720p — Standard ; 1080p — Pro (plus cher)."
+    opcje_cele:
+      "720p": {mode: std}
+      "1080p": {mode: pro}
+  - id: dlugosc
+    typ: dlugosc
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 5
+    min: 3
+    max: 10
+    krok: 1
+    int: true
+    cel_sekundy: [duration]

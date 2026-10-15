@@ -1,0 +1,48 @@
+id: minimax-music-3
+nazwa: MiniMax Music 3
+obszar: muzyka
+kolejnosc: 30
+licencja: MiniMax Community (komercyjnie do 20 mln $ przychodu)
+opis:
+  pl: "Utwory do 5 min, instrumentalne albo piosenki. Dokładnie trzyma się opisu i struktury. 30 s w ok. 1,5 min."
+  en: "Pieces up to 5 min, instrumental or songs. Follows the description and structure closely. 30 s in about 1.5 min."
+  fr: "Morceaux jusqu'à 5 min, instrumentaux ou chansons. Suit fidèlement la description et la structure. 30 s en env. 1,5 min."
+uwagi:
+  pl: "Opis zaczyna się zwykle od „Global Metadata:” (gatunek, nastrój, tempo, instrumenty); strukturę podaj sekcjami w polu „słowa”."
+  en: "The description usually starts with \"Global Metadata:\" (genre, mood, tempo, instruments); give the structure as sections in the \"lyrics\" field."
+  fr: "La description commence en général par « Global Metadata: » (genre, ambiance, tempo, instruments) ; indique la structure en sections dans le champ « paroles »."
+backend: comfyui
+workflow: muzyka/minimax_music3_tekst-na-muzyke.api.json
+wyjscie: dzwiek
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: opis, en: description, fr: description}
+    cel: ["@mm3.caption"]
+  - id: slowa
+    typ: prompt
+    etykieta: {pl: słowa / struktura, en: lyrics / structure, fr: paroles / structure}
+    domyslnie: "[Intro]\n\n[Instrumental]\n\n[Instrumental]\n\n[Solo]\n\n[Outro]"
+    cel: ["@mm3.lyrics"]
+  - id: dlugosc
+    typ: liczba
+    etykieta: {pl: maks. długość (s), en: max length (s), fr: durée max. (s)}
+    domyslnie: 60
+    min: 10
+    max: 300
+    krok: 10
+    cel: ["@mm3.max_duration"]
+  - id: tryb
+    typ: tryb
+    etykieta: {pl: tryb, en: mode, fr: mode}
+    domyslnie: szybki
+    pomoc:
+      pl: "Szybki — enkoder INT8 (ok. 1,5 min na 30 s). Jakość — enkoder bf16 (ok. 2,5 min)."
+      en: "Fast — INT8 encoder (about 1.5 min per 30 s). Quality — bf16 encoder (about 2.5 min)."
+      fr: "Rapide — encodeur INT8 (env. 1,5 min pour 30 s). Qualité — encodeur bf16 (env. 2,5 min)."
+    opcje_cele:
+      szybki: {"@enkoder.clip_name": minimax_music3_text_encoder_pruned_int8_convrot.safetensors}
+      jakosc: {"@enkoder.clip_name": minimax_music3_text_encoder_pruned_bf16.safetensors}
+  - id: seed
+    typ: seed
+    cel: ["@seed_node.seed"]

@@ -1,0 +1,60 @@
+id: minimax-h3-api
+ukryty: true
+nazwa: MiniMax H3 · API
+obszar: wideo
+kolejnosc: 11
+poradnik: minimax-h3
+licencja: {pl: "MiniMax H3 (usługa komercyjna, przez HiggsField)", en: "MiniMax H3 (commercial service, via HiggsField)", fr: "MiniMax H3 (service commercial, via HiggsField)"}
+opis:
+  pl: "Zamknięte H3 MiniMax przez API (HiggsField), 2K, 5–15 s. Zapas dla lokalnego H3 przy długiej kolejce."
+  en: "Closed MiniMax H3 via API (HiggsField), 2K, 5–15 s. Backup for the local H3 when the queue is long."
+  fr: "Le H3 fermé de MiniMax via API (HiggsField), 2K, 5–15 s. Solution de repli pour le H3 local quand la file d'attente est longue."
+backend: api
+dostawca: higgsfield
+wyjscie: wideo
+stale: {resolution: "2K", aigc_watermark: false}
+endpointy:                # same dźwięki, bez obrazu/wideo, nie działają w API (wtedy zostaje kolejka lokalna)
+  - {endpoint: minimax/h3/reference-to-video, gdy_ktores: [obrazy, wideo], wejscia: [obrazy, wideo, dzwieki], ignoruj: [klatka_start, klatka_koniec]}
+  - {endpoint: minimax/h3/image-to-video, gdy: [klatka_start], wejscia: [klatka_start, klatka_koniec]}
+  - {endpoint: minimax/h3/text-to-video, gdy: [], wejscia: []}
+cena:                     # USD za sekundę wyniku 2K — wycena HiggsField 15.10.2026 (rabat tylko 15%; cennik 0,13)
+  usd_s: {"*": 0.1105}
+wejscia:
+  - id: klatka_start
+    typ: obraz
+    cel: image_url
+  - id: klatka_koniec
+    typ: obraz
+    cel: end_image_url
+  - id: obrazy
+    typ: obraz
+    wiele: 9
+    znacznik: "<Picture {n}>"
+    cel: image_urls
+  - id: wideo
+    typ: wideo
+    wiele: 3
+    znacznik: "<Video {n}>"
+    cel: video_urls
+  - id: dzwieki
+    typ: dzwiek
+    wiele: 3
+    znacznik: "<Audio {n}>"
+    cel: audio_urls
+parametry:
+  - id: prompt
+    typ: prompt
+    wymagane: true
+    cel: [prompt]
+  - id: proporcje
+    typ: wybor
+    domyslnie: "16:9"
+    opcje: ["16:9", "21:9", "4:3", "1:1", "3:4", "9:16"]
+    cel: [aspect_ratio]
+  - id: dlugosc
+    typ: dlugosc
+    domyslnie: 10
+    min: 5
+    max: 15
+    int: true
+    cel_sekundy: [duration]

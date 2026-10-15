@@ -1,0 +1,57 @@
+id: woosh
+nazwa: Woosh — efekt z opisu
+nazwy: {en: "Woosh — effect from a description", fr: "Woosh — effet à partir d'une description"}
+obszar: sfx
+kolejnosc: 10
+licencja: {pl: "Sony AI — niekomercyjna (badania)", en: "Sony AI — non-commercial (research)", fr: "Sony AI — non commerciale (recherche)"}
+poradnik: woosh
+opis:
+  pl: "Efekty dźwiękowe z opisu, krótkie (do ok. 5 s, dłużej = eksperyment). Szybki tryb: ok. sekunda."
+  en: "Sound effects from a description, short (up to ~5 s, longer = experiment). Fast mode: about a second."
+  fr: "Effets sonores courts à partir d'une description (jusqu'à env. 5 s ; au-delà = expérimental). Mode rapide : env. une seconde."
+uwagi:
+  pl: "Opisz jedno zdarzenie dźwiękowe: źródło, materiał, akcję, przestrzeń (np. „drewniane drzwi skrzypią i zamykają się, duży pusty pokój”)."
+  en: "Describe a single sound event: source, material, action, space (e.g. \"a wooden door creaks and shuts, large empty room\")."
+  fr: "Décris un seul événement sonore : source, matière, action, espace (par ex. « une porte en bois grince et se ferme, grande pièce vide »)."
+backend: http
+usluga: woosh
+endpoint: /t2a
+format: json
+odpowiedz: json_plik
+wyjscie: dzwiek
+parametry:
+  - id: prompt
+    typ: prompt
+    cel: [prompt]
+  - id: dlugosc
+    typ: ulamek
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 5
+    min: 1
+    max: 10
+    krok: 0.5
+    cel: [duration]
+  - id: tryb
+    typ: tryb
+    etykieta: {pl: tryb, en: mode, fr: mode}
+    domyslnie: szybki
+    pomoc:
+      pl: "Szybki — model destylowany, 4 kroki. Jakość — model pełny, wolniej."
+      en: "Fast — distilled model, 4 steps. Quality — full model, slower."
+      fr: "Rapide — modèle distillé, 4 étapes. Qualité — modèle complet, plus lent."
+    opcje_cele:
+      szybki: {mode: szybki}
+      jakosc: {mode: jakosc}
+  - id: cfg
+    typ: ulamek
+    etykieta: {pl: siła opisu (CFG), en: prompt strength (CFG), fr: force de la description (CFG)}
+    domyslnie: 4.5
+    min: 1
+    max: 10
+    krok: 0.5
+    zaawansowane: true
+    cel: [cfg]
+  - id: seed
+    typ: seed
+    max: 2147483647
+    cel: [seed]

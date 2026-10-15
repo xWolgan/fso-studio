@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ T['obszar.tekst'] }} · {{ T.tytul }}{% endblock %}
+{% block crumb %}<span class="crumb">{{ T['obszar.tekst'] }}</span>{% endblock %}
+{% block body %}
+<main class="app czat" id="app" data-obszar="tekst">
+  <aside class="shots">
+    <h3>{{ T.rozmowy }}</h3>
+    <div id="rozmowy"></div>
+    <button class="btn quiet new" id="nowa">+ {{ T.nowa_rozmowa }}</button>
+    <p class="hint">{{ T.rozmowy_prywatne }}</p>
+  </aside>
+  <section class="czat-col">
+    <div class="watek" id="watek"><div class="pusto">{{ T.zaznacz_aby }}</div></div>
+    <div class="pisz">
+      <div class="zal-lista" id="zal-lista"></div>
+      <textarea id="tresc" rows="3" placeholder="{{ T.napisz }}" spellcheck="true"></textarea>
+      <div class="pisz-l">
+        <input type="file" id="zal-plik" multiple hidden accept=".txt,.md,.markdown,.csv,.tsv,.json,.srt,.vtt,.html,.htm,.xml,.yaml,.yml,.py,.js,.css,.rtf,.tex,.fountain,.docx,.odt,.pdf,.jpg,.jpeg,.png,.webp,.gif">
+        <button class="btn quiet" id="zal-dodaj" type="button" title="{{ T.zal_dodaj }}">📎</button>
+        <label class="inline" style="cursor:pointer"><input type="checkbox" id="mysl"> {{ T.mysl_dluzej }}</label>
+        <span class="sp"></span>
+        <span class="msg" id="msg"></span>
+        <button class="btn primary" id="wyslij">{{ T.wyslij }}</button>
+      </div>
+    </div>
+  </section>
+  <aside class="panel" id="panel">
+    <section class="sec gen">
+      <div class="model-row"><select id="model"></select></div>
+      <p class="desc" id="model-opis"></p>
+      <div class="field"><label>{{ T.tryb_rozmowy }}</label>
+        <div class="chips" id="tryb"><button class="chip on" data-k="rozmowa" type="button">{{ T.tryb_rozmowa }}</button><button class="chip" data-k="lustro" type="button">{{ T.tryb_lustro }}</button><button class="chip" data-k="prompt" type="button">{{ T.tryb_prompt }}</button></div>
+        <div class="help" id="tryb-opis"></div></div>
+      <div class="field" id="biblia-pole" hidden><label>{{ T.biblia }}</label>
+        <select id="biblia"></select>
+        <div class="chips tematy" id="tematy"></div>
+        <div class="help" id="tematy-opis"></div></div>
+    </section>
+    <section class="sec"><h3>{{ T.prompty_sys }}</h3>
+      <div id="prompty"></div>
+      <button class="btn quiet" id="pelny">{{ T.pelny_prompt }}</button>
+      <p class="hint">{{ T.prompty_opis }}</p></section>
+    <section class="sec"><h3>{{ T.artefakty }}</h3><ul class="art-lista" id="artefakty"></ul>
+      <button class="btn quiet" id="art-nowy">+ {{ T.nowa_notatka }}</button></section>
+  </aside>
+</main>
+<script>window.MODELS = {{ models_json | safe }};</script>
+{% endblock %}
+{% block scripts %}
+<script src="/static/vendor/marked.min.js"></script>
+<script src="/static/vendor/purify.min.js"></script>
+<script src="/static/tekst.js?v=12"></script>
+{% endblock %}

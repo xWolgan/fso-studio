@@ -1,0 +1,55 @@
+id: qwen-image-2-1-edycja
+nazwa: Qwen-Image 2.1 Edit
+obszar: obraz
+kolejnosc: 35
+licencja: {pl: "Qwen Research (niekomercyjna)", en: "Qwen Research (non-commercial)", fr: "Qwen Research (non commerciale)"}
+poradnik: qwen-image-2-1
+opis:
+  pl: Edycja obrazu poleceniem w nowszym Qwen-Image 2.1 — do dwóch obrazów wejściowych (np. postać i strój). Wynik ma rozmiar pierwszego obrazu.
+  en: Image editing by instruction in the newer Qwen-Image 2.1 — up to two input images (e.g. a character and a garment). The result follows the size of the first image.
+  fr: "Retouche d'image par instruction avec le plus récent Qwen-Image 2.1 — jusqu'à deux images d'entrée (par ex. un personnage et une tenue). Le résultat a la taille de la première image."
+uwagi:
+  pl: Pisz, co ma się zmienić, a co zostać („zamień płaszcz na ten z obrazu 2, twarz i tło bez zmian”).
+  en: Say what should change and what should stay ("swap the coat for the one in image 2, keep the face and background").
+  fr: "Écris ce qui doit changer et ce qui doit rester (« remplace le manteau par celui de l'image 2, garde le visage et le fond tels quels »)."
+backend: comfyui
+workflow: obraz/qwenimage21_edycja-obrazu.api.json
+wyjscie: obraz
+wejscia:
+  - id: obraz1
+    typ: obraz
+    etykieta: {pl: obraz 1, en: image 1, fr: image 1}
+    wymagane: true
+    cel: ["@470.image"]
+  - id: obraz2
+    typ: obraz
+    etykieta: {pl: obraz 2 (opcjonalnie), en: image 2 (optional), fr: image 2 (facultatif)}
+    wymagane: false
+    cel: ["@475.image"]
+    jesli_brak_odlacz: ["475"]
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: polecenie, en: instruction, fr: instruction}
+    cel: ["@459:484.on_false", "@459:500.prompt"]
+  - id: seed
+    typ: seed
+    cel: ["@459:458.seed", "@459:500.sampling_mode.seed"]
+  - id: kroki
+    typ: liczba
+    etykieta: {pl: kroki, en: steps, fr: étapes}
+    min: 10
+    max: 50
+    domyslnie: 25
+    zaawansowane: true
+    cel: ["@459:458.steps"]
+  - id: rozszerzanie
+    typ: przelacznik
+    etykieta: {pl: model sam rozbudowuje polecenie, en: model expands the instruction, fr: "le modèle enrichit lui-même l'instruction"}
+    pomoc:
+      pl: Wbudowany LLM (patrzy też na obrazy) przepisuje polecenie na szczegółowe, zanim powstanie obraz. Domyślnie wyłączone.
+      en: A built-in LLM (which also looks at the images) rewrites the instruction in detail before the image is made. Off by default.
+      fr: "Un LLM intégré (qui regarde aussi les images) réécrit l'instruction de façon détaillée avant la création de l'image. Désactivé par défaut."
+    domyslnie: false
+    zaawansowane: true
+    cel: ["@459:484.switch"]

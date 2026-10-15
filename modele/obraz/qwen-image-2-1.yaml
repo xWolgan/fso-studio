@@ -1,0 +1,44 @@
+id: qwen-image-2-1
+nazwa: Qwen-Image 2.1
+obszar: obraz
+kolejnosc: 20
+licencja: {pl: "Qwen Research (niekomercyjna)", en: "Qwen Research (non-commercial)", fr: "Qwen Research (non commerciale)"}
+opis:
+  pl: Wysoka jakość, dobrze rozumie długie opisy i tekst w obrazie. Ok. 25 s.
+  en: High quality, follows long descriptions and text in images well. About 25 s.
+  fr: "Haute qualité, comprend bien les descriptions longues et le texte dans l'image. Env. 25 s."
+backend: comfyui
+workflow: obraz/qwenimage21_tekst-na-obraz.api.json
+wyjscie: obraz
+parametry:
+  - id: prompt
+    typ: prompt
+    cel: ["@459:474.on_false", "@459:471.prompt"]
+  - id: proporcje
+    typ: proporcje
+    domyslnie: "16:9"
+    opcje: ["16:9", "21:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"]
+    megapiksele: 1.0
+    cel_selektor: ["@13.aspect_ratio"]
+    cel_megapiksele: ["@13.megapixels"]
+  - id: seed
+    typ: seed
+    cel: ["@459:458.seed", "@459:471.sampling_mode.seed"]
+  - id: kroki
+    typ: liczba
+    etykieta: {pl: kroki, en: steps, fr: étapes}
+    min: 10
+    max: 50
+    domyslnie: 25
+    zaawansowane: true
+    cel: ["@459:458.steps"]
+  - id: rozszerzanie
+    typ: przelacznik
+    etykieta: {pl: model sam rozbudowuje prompt, en: model expands the prompt, fr: le modèle enrichit lui-même le prompt}
+    pomoc:
+      pl: Wbudowany w model mały LLM najpierw przemyśli, a potem przepisze Twój prompt na bardziej szczegółowy, zanim powstanie obraz (dłużej — ok. 1–2 min więcej). Domyślnie wyłączone.
+      en: A small built-in LLM first thinks, then rewrites your prompt into a more detailed one before the image is made (slower — about 1–2 min extra). Off by default.
+      fr: "Un petit LLM intégré au modèle réfléchit d'abord, puis réécrit ton prompt de façon plus détaillée avant la création de l'image (plus long — env. 1–2 min de plus). Désactivé par défaut."
+    domyslnie: false
+    zaawansowane: true
+    cel: ["@459:474.switch"]

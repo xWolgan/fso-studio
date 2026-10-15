@@ -1,0 +1,115 @@
+id: minimax-h3-klatki
+nazwa: MiniMax H3 · klatki kluczowe
+nazwy: {en: "MiniMax H3 · keyframes", fr: "MiniMax H3 · images clés"}
+obszar: wideo
+zapas_api:                     # zadanie > 10 min → propozycja API (pierwsza i ostatnia klatka)
+  - {model: wan-3, mapa: {klatka1: klatka_start, klatka3: klatka_koniec}}
+  - {model: kling-3, mapa: {klatka1: klatka_start, klatka3: klatka_koniec}}
+kolejnosc: 14
+poradnik: minimax-h3
+licencja: MiniMax (otwarte wagi)
+opis:
+  pl: "Wideo z dźwiękiem prowadzone przez trzy klatki kluczowe w wybranych sekundach, z opcjonalną referencją postaci. Do 15 s."
+  en: "Video with sound guided by three keyframes at chosen seconds, with an optional character reference. Up to 15 s."
+  fr: "Vidéo avec son guidée par trois images clés placées aux secondes choisies, avec une référence de personnage facultative. Jusqu'à 15 s."
+uwagi:
+  pl: "Czasy klatek muszą mieścić się w długości klipu. Referencja to <Picture 1> w prompcie."
+  en: "Keyframe times must fit within the clip length. The reference is <Picture 1> in the prompt."
+  fr: "Les instants des images clés doivent tenir dans la durée du clip. Dans le prompt, la référence s'appelle <Picture 1>."
+backend: comfyui
+workflow: wideo/h3_klatki-kluczowe.api.json
+wyjscie: wideo
+wejscia:
+  - id: ref1
+    typ: obraz
+    etykieta: {pl: referencja — <Picture 1> (opcjonalnie), en: reference — <Picture 1> (optional), fr: "référence — <Picture 1> (facultatif)"}
+    wymagane: false
+    cel: ["@ref1.image"]
+    jesli_brak_odlacz: ["ref1"]
+  - id: klatka1
+    typ: obraz
+    etykieta: {pl: klatka kluczowa 1, en: keyframe 1, fr: image clé 1}
+    wymagane: true
+    cel: ["@klatka1.image"]
+  - id: klatka2
+    typ: obraz
+    etykieta: {pl: klatka kluczowa 2 (opcjonalnie), en: keyframe 2 (optional), fr: image clé 2 (facultatif)}
+    wymagane: false
+    cel: ["@klatka2.image"]
+    jesli_brak_odlacz: ["klatka2"]
+    jesli_brak_pomin: ["162.positive"]
+  - id: klatka3
+    typ: obraz
+    etykieta: {pl: klatka kluczowa 3 (opcjonalnie), en: keyframe 3 (optional), fr: image clé 3 (facultatif)}
+    wymagane: false
+    cel: ["@klatka3.image"]
+    jesli_brak_odlacz: ["klatka3"]
+    jesli_brak_pomin: ["169.positive"]
+parametry:
+  - id: prompt
+    typ: prompt
+    cel: ["@prompt_tekst.value"]
+  - id: proporcje
+    typ: proporcje
+    domyslnie: "16:9"
+    opcje: ["16:9", "21:9", "4:3", "1:1", "3:4", "9:16"]
+    cel_selektor: ["@rozdzielczosc.aspect_ratio"]
+  - id: rozdzielczosc
+    typ: tryb
+    etykieta: {pl: rozdzielczość, en: resolution, fr: résolution}
+    domyslnie: "480p"
+    pomoc:
+      pl: "480p (ok. 0,4 MP) — szybko; 720p (ok. 0,9 MP) — wyraźnie dłużej i więcej pamięci. Otwarte wagi H3 obsługują do 768p."
+      en: "480p (about 0.4 MP) — fast; 720p (about 0.9 MP) — much slower and more memory. Open H3 weights support up to 768p."
+      fr: "480p (env. 0,4 MP) — rapide ; 720p (env. 0,9 MP) — nettement plus long et plus gourmand en mémoire. Les poids ouverts de H3 vont jusqu'à 768p."
+    opcje_cele:
+      "480p": {"@rozdzielczosc.megapixels": 0.4}
+      "720p": {"@rozdzielczosc.megapixels": 0.9}
+  - id: dlugosc
+    typ: dlugosc
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 10
+    min: 1
+    max: 15
+    krok: 0.5
+    fps: 24
+    klatki: "17n+5"
+    cel_sekundy: ["@sekundy.value"]
+  - id: czas1
+    typ: ulamek
+    etykieta: {pl: klatka 1 — sekunda, en: keyframe 1 — second, fr: image clé 1 — seconde}
+    min: 0
+    max: 15
+    krok: 0.5
+    domyslnie: 2
+    cel: ["@czas1.value"]
+  - id: czas2
+    typ: ulamek
+    etykieta: {pl: klatka 2 — sekunda, en: keyframe 2 — second, fr: image clé 2 — seconde}
+    min: 0
+    max: 15
+    krok: 0.5
+    domyslnie: 5
+    cel: ["@czas2.value"]
+  - id: czas3
+    typ: ulamek
+    etykieta: {pl: klatka 3 — sekunda, en: keyframe 3 — second, fr: image clé 3 — seconde}
+    min: 0
+    max: 15
+    krok: 0.5
+    domyslnie: 9
+    cel: ["@czas3.value"]
+  - id: tryb
+    typ: tryb
+    etykieta: {pl: tryb, en: mode, fr: mode}
+    domyslnie: szybki
+    pomoc:
+      pl: "Szybki — LoRA turbo (4 kroków). Jakość — 20 kroków, kilka razy dłużej."
+      en: "Fast — turbo LoRA (4 steps). Quality — 20 steps, several times slower."
+      fr: "Rapide — LoRA turbo (4 étapes). Qualité — 20 étapes, plusieurs fois plus long."
+    opcje_cele:
+      szybki: {"@turbo.value": true}
+      jakosc: {"@turbo.value": false}
+  - id: seed
+    typ: seed
+    cel: ["@szum.noise_seed"]

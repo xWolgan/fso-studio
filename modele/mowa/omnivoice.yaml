@@ -1,0 +1,39 @@
+id: omnivoice
+nazwa: OmniVoice
+obszar: mowa
+kolejnosc: 10
+licencja: {pl: "CC-BY-NC (niekomercyjna)", en: "CC-BY-NC (non-commercial)", fr: "CC-BY-NC (non commerciale)"}
+opis:
+  pl: "Synteza mowy — najlepszy polski spośród lokalnych modeli, ok. 1–2 s na zdanie. Ponad 600 języków."
+  en: "Speech synthesis — the best Polish among local models, about 1–2 s per sentence. Over 600 languages."
+  fr: "Synthèse vocale — le meilleur polonais parmi les modèles locaux, env. 1–2 s par phrase. Plus de 600 langues."
+uwagi:
+  pl: "Interpunkcja steruje pauzami i intonacją. Własny głos — pozycja „klonowanie głosu” albo „projektowanie głosu”."
+  en: "Punctuation controls pauses and intonation. For your own voice, use the \"voice cloning\" or \"voice design\" entry."
+  fr: "La ponctuation contrôle les pauses et l'intonation. Pour ta propre voix : l'entrée « clonage de voix » ou « conception de voix »."
+backend: comfyui
+workflow: mowa/omnivoice_tekst-na-mowe.api.json
+wyjscie: dzwiek
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: tekst do wypowiedzenia, en: text to speak, fr: texte à prononcer}
+    cel: ["@tts.text"]
+  - id: jezyk
+    typ: wybor
+    etykieta: {pl: język, en: language, fr: langue}
+    domyslnie: Polish
+    opcje: [Polish, English, German, French, Spanish, Italian, Ukrainian, Czech, Russian, Chinese, Japanese]
+    cel: ["@silnik.language"]
+  - id: tempo
+    typ: ulamek
+    etykieta: {pl: tempo mowy, en: speech rate, fr: débit de parole}
+    domyslnie: 1.0
+    min: 0.5
+    max: 2.0
+    krok: 0.05
+    cel: ["@silnik.speed"]
+  - id: seed
+    typ: seed
+    max: 4294967295
+    cel: ["@seed_src.value"]

@@ -1,0 +1,70 @@
+id: kling-3
+nazwa: Kling 3.0 · API
+obszar: wideo
+kolejnosc: 30
+licencja: {pl: "Kling (usługa komercyjna, przez HiggsField)", en: "Kling (commercial service, via HiggsField)", fr: "Kling (service commercial, via HiggsField)"}
+opis:
+  pl: "Wideo z dźwiękiem przez API (HiggsField), 3–15 s. Z tekstu, z pierwszą klatką albo z pierwszą i ostatnią. Każda generacja schodzi z Twojego budżetu."
+  en: "Video with sound via API (HiggsField), 3–15 s. From text, a first frame, or first and last frames. Every generation is paid from your budget."
+  fr: "Vidéo avec son via API (HiggsField), 3–15 s. À partir d'un texte, d'une première image, ou d'une première et d'une dernière image. Chaque génération est décomptée de ton budget."
+uwagi:
+  pl: "Prompt do 2500 znaków (dłuższy jest obcinany). Z pierwszą klatką proporcje wynikają z obrazu. Dostawca moderuje treść — odrzucone zadanie nie kosztuje."
+  en: "Prompt up to 2500 characters (longer is cut). With a first frame the aspect ratio follows the image. The provider moderates content — a rejected job costs nothing."
+  fr: "Prompt jusqu'à 2500 caractères (au-delà, il est tronqué). Avec une première image, le format suit celui de l'image. Le fournisseur modère le contenu — une tâche refusée ne coûte rien."
+backend: api
+dostawca: higgsfield
+wyjscie: wideo
+endpointy:
+  - {endpoint: "kling-video/v3.0/{jakosc}/image-to-video", gdy: [klatka_start], pomin: [aspect_ratio]}
+  - {endpoint: "kling-video/v3.0/{jakosc}/text-to-video", gdy: [], wejscia: []}
+cena:                     # USD za sekundę wyniku — wycena HiggsField 15.10.2026 (rabat 50% do ok. 21.10; potem 2×)
+  wg: [rozdzielczosc, dzwiek]
+  usd_s: {"720p|z_dzwiekiem": 0.063, "720p|bez_dzwieku": 0.042, "1080p|z_dzwiekiem": 0.084, "1080p|bez_dzwieku": 0.056}
+wejscia:
+  - id: klatka_start
+    typ: obraz
+    cel: image_url
+    etykieta: {pl: pierwsza klatka (opcjonalnie), en: first frame (optional), fr: première image (facultatif)}
+  - id: klatka_koniec
+    typ: obraz
+    cel: last_image_url
+    wymaga: [klatka_start]
+    etykieta: {pl: ostatnia klatka (opcjonalnie; razem z pierwszą), en: last frame (optional; with the first), fr: dernière image (facultatif ; avec la première)}
+parametry:
+  - id: prompt
+    typ: prompt
+    wymagane: true
+    cel: [prompt]
+  - id: proporcje
+    typ: wybor
+    etykieta: {pl: proporcje, en: aspect ratio, fr: format}
+    domyslnie: "16:9"
+    opcje: ["16:9", "9:16", "1:1"]
+    cel: [aspect_ratio]
+  - id: rozdzielczosc
+    typ: tryb
+    etykieta: {pl: rozdzielczość, en: resolution, fr: résolution}
+    domyslnie: "720p"
+    pomoc:
+      pl: "720p — Kling Standard; 1080p — Kling Pro (droższy)."
+      en: "720p — Kling Standard; 1080p — Kling Pro (more expensive)."
+      fr: "720p — Kling Standard ; 1080p — Kling Pro (plus cher)."
+    opcje_cele:
+      "720p": {_jakosc: std}
+      "1080p": {_jakosc: pro}
+  - id: dlugosc
+    typ: dlugosc
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 5
+    min: 3
+    max: 15
+    krok: 1
+    int: true
+    cel_sekundy: [duration]
+  - id: dzwiek
+    typ: tryb
+    etykieta: {pl: dźwięk, en: sound, fr: son}
+    domyslnie: z_dzwiekiem
+    opcje_cele:
+      z_dzwiekiem: {sound: "on"}
+      bez_dzwieku: {sound: "off"}

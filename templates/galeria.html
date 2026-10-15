@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ T.galeria }} · {{ T.tytul }}{% endblock %}
+{% block crumb %}<span class="crumb">{{ T.galeria }}</span>{% endblock %}
+{% block body %}
+<main class="gallery-page">
+  <div class="filters">
+    <span class="toggle grp" id="f-kind">
+      <a data-k="" class="on">{{ T.wszystko }}</a><a data-k="obraz">{{ T.obrazy }}</a><a data-k="wideo">{{ T.wideo_l }}</a><a data-k="dzwiek">{{ T.dzwieki }}</a><a data-k="tekst">{{ T.teksty }}</a>
+    </span>
+    <span class="toggle grp" id="f-who"><a data-k="ja" class="on">{{ T.moje }}</a><a data-k="wszyscy">{{ T.wszystkich }}</a></span>
+    <select id="f-person" style="width:auto"><option value="">—</option></select>
+    <input type="text" id="f-q" placeholder="{{ T.szukaj }}" style="width:280px" spellcheck="false">
+    <button class="star-f" id="f-star" title="{{ T.tylko_wybrane }}" style="border:0;background:transparent;font-size:16px;cursor:pointer;color:var(--muted)">★</button>
+    <span style="flex:1"></span>
+    <button class="btn quiet" id="f-cmp" style="display:none"></button>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+{% endblock %}
+{% block scripts %}<script src="/static/galeria.js?v=8"></script>{% endblock %}

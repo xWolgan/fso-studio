@@ -1,0 +1,65 @@
+id: breeze-tts-2
+nazwa: Breeze TTS 2 (EN / ZH)
+obszar: mowa
+kolejnosc: 20
+licencja: {pl: "niekomercyjna (wagi i wyniki); kod Apache 2.0", en: "non-commercial (weights and outputs); code Apache 2.0", fr: "non commerciale (poids et résultats) ; code Apache 2.0"}
+poradnik: breeze-tts-2
+opis:
+  pl: "Mowa po angielsku i chińsku (nie po polsku — do polskiego OmniVoice). Głos projektujesz opisem albo klonujesz z próbki."
+  en: "Speech in English and Chinese (not Polish — use OmniVoice for Polish). Design a voice with a description or clone it from a sample."
+  fr: "Voix en anglais et en chinois (pas en polonais — pour le polonais, utilise OmniVoice). Tu conçois une voix à partir d'une description ou tu la clones depuis un échantillon."
+uwagi:
+  pl: "W tekście działają zdarzenia: (laugh), (sigh), (cough), (clears throat). Klonowanie: wgraj próbkę głosu i wpisz jej dokładną transkrypcję."
+  en: "Events work inside the text: (laugh), (sigh), (cough), (clears throat). Cloning: upload a voice sample and type its exact transcript."
+  fr: "Le texte accepte des événements : (laugh), (sigh), (cough), (clears throat). Clonage : importe un échantillon de voix et saisis sa transcription exacte."
+backend: http
+usluga: breeze
+endpoint: /v1/audio/speech
+format: form
+odpowiedz: pcm16
+wyjscie: dzwiek
+wejscia:
+  - id: probka
+    typ: dzwiek
+    etykieta: {pl: próbka głosu (opcjonalnie), en: voice sample (optional), fr: échantillon de voix (facultatif)}
+    cel: ref_audio
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: tekst do wypowiedzenia, en: text to speak, fr: texte à prononcer}
+    cel: [text]
+  - id: instrukcja
+    typ: tekst
+    etykieta: {pl: głos i sposób mówienia, en: voice and delivery, fr: voix et diction}
+    domyslnie: ""
+    pomoc:
+      pl: "Po angielsku, np. „A deep, warm, elderly male voice, slow and tired”. Bez próbki = opis głosu; z próbką = reżyseria (ton, emocja, tempo). Puste pole + próbka = czysty klon (wtedy CFG 1)."
+      en: "In English, e.g. \"A deep, warm, elderly male voice, slow and tired\". Without a sample = voice description; with a sample = direction (tone, emotion, pace). Empty + sample = pure clone (keep CFG at 1)."
+      fr: "En anglais, par ex. « A deep, warm, elderly male voice, slow and tired ». Sans échantillon = description de la voix ; avec échantillon = direction de jeu (ton, émotion, rythme). Champ vide + échantillon = clone pur (CFG à 1 dans ce cas)."
+    cel: [instruction]
+  - id: transkrypcja
+    typ: tekst
+    etykieta: {pl: transkrypcja próbki, en: sample transcript, fr: "transcription de l'échantillon"}
+    domyslnie: ""
+    pomoc:
+      pl: "Tylko przy klonowaniu: dokładnie to, co mówi próbka."
+      en: "Only when cloning: exactly what the sample says."
+      fr: "Uniquement pour le clonage : exactement ce que dit l'échantillon."
+    cel: [ref_text]
+  - id: cfg
+    typ: ulamek
+    etykieta: {pl: siła instrukcji (CFG), en: instruction strength (CFG), fr: "force de l'instruction (CFG)"}
+    domyslnie: 1.0
+    min: 0.5
+    max: 4
+    krok: 0.1
+    pomoc:
+      pl: "Z instrukcją producent zaleca 4 (opis głosu i reżyseria). Bez instrukcji zostaw 1 — inna wartość daje błąd usługi."
+      en: "With an instruction the maker recommends 4 (voice design and direction). Without an instruction keep 1 — any other value makes the service fail."
+      fr: "Avec une instruction, l'éditeur recommande 4 (description de la voix et direction de jeu). Sans instruction, laisse 1 — toute autre valeur fait échouer le service."
+    zaawansowane: true
+    cel: [cfg_scale]
+  - id: seed
+    typ: seed
+    max: 2147483647
+    cel: [seed]

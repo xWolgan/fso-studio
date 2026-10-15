@@ -1,0 +1,87 @@
+id: wan-3
+nazwa: WAN 3.0 · API
+obszar: wideo
+kolejnosc: 32
+licencja: {pl: "Alibaba Wan (usługa komercyjna, przez HiggsField)", en: "Alibaba Wan (commercial service, via HiggsField)", fr: "Alibaba Wan (service commercial, via HiggsField)"}
+opis:
+  pl: "Wideo z dźwiękiem przez API (HiggsField), 2–30 s. Z tekstu, z pierwszą (i ostatnią) klatką albo z inspiracjami: obrazy, klipy wideo, nagrania. Każda generacja schodzi z Twojego budżetu."
+  en: "Video with sound via API (HiggsField), 2–30 s. From text, a first (and last) frame, or inspirations: images, video clips, recordings. Every generation is paid from your budget."
+  fr: "Vidéo avec son via API (HiggsField), 2–30 s. À partir d'un texte, d'une première (et dernière) image ou d'inspirations : images, clips vidéo, enregistrements. Chaque génération est décomptée de ton budget."
+uwagi:
+  pl: "Gdy podasz inspiracje, pierwsza/ostatnia klatka nie są używane. Inspiracje przywołuj opisowo, w kolejności (np. „postać z pierwszego obrazu”). Nagrania: WAV lub MP3; wideo: MP4. Dostawca moderuje treść — odrzucone zadanie nie kosztuje."
+  en: "With inspirations, the first/last frame are not used. Refer to inspirations descriptively, in order (e.g. “the character from the first image”). Audio: WAV or MP3; video: MP4. The provider moderates content — a rejected job costs nothing."
+  fr: "Si tu fournis des inspirations, la première et la dernière image ne sont pas utilisées. Évoque les inspirations de façon descriptive, dans l'ordre (par ex. « le personnage de la première image »). Enregistrements : WAV ou MP3 ; vidéo : MP4. Le fournisseur modère le contenu — une tâche refusée ne coûte rien."
+backend: api
+dostawca: higgsfield
+wyjscie: wideo
+endpointy:
+  - {endpoint: alibaba/wan-3.0/reference-to-video, gdy_ktores: [obrazy, wideo, dzwieki], wejscia: [obrazy, wideo, dzwieki], ignoruj: [klatka_start, klatka_koniec]}
+  - {endpoint: alibaba/wan-3.0/image-to-video, gdy: [klatka_start], wejscia: [klatka_start, klatka_koniec]}
+  - {endpoint: alibaba/wan-3.0/text-to-video, gdy: [], wejscia: []}
+cena:                     # USD za sekundę wyniku: cennik 0,05/0,10/0,20 − rabat 60% (do ok. 21.10.2026; wycena API go nie pokazuje)
+  wg: rozdzielczosc
+  usd_s: {"480p": 0.02, "720p": 0.04, "1080p": 0.08}
+wejscia:
+  - id: klatka_start
+    typ: obraz
+    cel: image_url
+    etykieta: {pl: pierwsza klatka (opcjonalnie), en: first frame (optional), fr: première image (facultatif)}
+  - id: klatka_koniec
+    typ: obraz
+    cel: end_image_url
+    wymaga: [klatka_start]
+    etykieta: {pl: ostatnia klatka (opcjonalnie; razem z pierwszą), en: last frame (optional; with the first), fr: dernière image (facultatif ; avec la première)}
+  - id: obrazy
+    typ: obraz
+    wiele: 10
+    cel: image_urls
+    etykieta: {pl: inspiracje — obrazy (do 10), en: inspirations — images (up to 10), fr: "inspirations — images (jusqu'à 10)"}
+  - id: wideo
+    typ: wideo
+    wiele: 5
+    cel: video_urls
+    etykieta: {pl: "inspiracje — wideo MP4 (do 5, razem do 30 s)", en: "inspirations — MP4 video (up to 5, 30 s total)", fr: "inspirations — vidéo MP4 (jusqu'à 5, 30 s au total)"}
+  - id: dzwieki
+    typ: dzwiek
+    wiele: 5
+    cel: audio_urls
+    etykieta: {pl: "inspiracje — dźwięk WAV/MP3 (do 5, razem do 30 s)", en: "inspirations — WAV/MP3 audio (up to 5, 30 s total)", fr: "inspirations — son WAV/MP3 (jusqu'à 5, 30 s au total)"}
+parametry:
+  - id: prompt
+    typ: prompt
+    wymagane: true
+    cel: [prompt]
+  - id: proporcje
+    typ: wybor
+    etykieta: {pl: proporcje, en: aspect ratio, fr: format}
+    domyslnie: "16:9"
+    opcje: ["16:9", "4:3", "1:1", "3:4", "9:16"]
+    cel: [aspect_ratio]
+  - id: rozdzielczosc
+    typ: tryb
+    etykieta: {pl: rozdzielczość, en: resolution, fr: résolution}
+    domyslnie: "720p"
+    opcje_cele:
+      "480p": {resolution: "480p"}
+      "720p": {resolution: "720p"}
+      "1080p": {resolution: "1080p"}
+  - id: dlugosc
+    typ: dlugosc
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 5
+    min: 2
+    max: 30
+    krok: 1
+    int: true
+    cel_sekundy: [duration]
+  - id: dzwiek
+    typ: tryb
+    etykieta: {pl: dźwięk, en: sound, fr: son}
+    domyslnie: z_dzwiekiem
+    opcje_cele:
+      z_dzwiekiem: {generate_audio: true}
+      bez_dzwieku: {generate_audio: false}
+  - id: seed
+    typ: seed
+    max: 2147483647
+    cel: [seed]

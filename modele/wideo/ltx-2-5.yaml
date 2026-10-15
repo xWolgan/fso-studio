@@ -1,0 +1,26 @@
+id: ltx-2-5
+nazwa: LTX 2.5
+obszar: wideo
+zapas_api: [wan-3, kling-3]   # zadanie > 10 min → propozycja API
+kolejnosc: 30
+poradnik: ltx-2-5
+licencja: LTX-2 Community
+opis:
+  pl: "Najnowszy LTX: wideo z dźwiękiem. Z samego tekstu, z pierwszą klatką albo z pierwszą i ostatnią."
+  en: "The newest LTX: video with sound. From text, from a first frame, or from first and last frames."
+  fr: "Le LTX le plus récent : vidéo avec son. À partir du seul texte, d'une première image, ou d'une première et d'une dernière image."
+backend: comfyui
+wyjscie: wideo
+parametry_z: ltx-2-5-tekst
+warianty:
+  - {model: ltx-2-5-klatki, gdy: [klatka_start, klatka_koniec]}
+  - {model: ltx-2-5-obraz, gdy: [klatka_start], mapa: {klatka_start: obraz}}
+  - {model: ltx-2-5-tekst, gdy: []}
+wejscia:
+  - id: klatka_start
+    typ: obraz
+    etykieta: {pl: pierwsza klatka (opcjonalnie), en: first frame (optional), fr: première image (facultatif)}
+  - id: klatka_koniec
+    typ: obraz
+    wymaga: [klatka_start]
+    etykieta: {pl: ostatnia klatka (opcjonalnie; razem z pierwszą), en: last frame (optional; with the first), fr: dernière image (facultatif ; avec la première)}

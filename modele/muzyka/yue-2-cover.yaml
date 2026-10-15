@@ -1,0 +1,41 @@
+id: yue-2-cover
+nazwa: YuE 2 · cover z nagrania
+nazwy: {en: "YuE 2 · cover from a recording", fr: "YuE 2 · reprise d'un enregistrement"}
+obszar: muzyka
+kolejnosc: 22
+poradnik: yue-2
+licencja: {pl: "CC-BY-NC (niekomercyjna)", en: "CC-BY-NC (non-commercial)", fr: "CC-BY-NC (non commerciale)"}
+opis:
+  pl: "Nowa aranżacja z melodii nagrania — model odczytuje linię melodyczną i buduje na niej utwór w nowym stylu."
+  en: "A new arrangement from the melody of a recording — the model reads the melodic line and builds a piece in a new style on it."
+  fr: "Un nouvel arrangement à partir de la mélodie d'un enregistrement — le modèle lit la ligne mélodique et construit dessus un morceau dans un nouveau style."
+backend: comfyui
+workflow: muzyka/yue2_cover-z-nagrania.api.json
+wyjscie: dzwiek
+wejscia:
+  - id: nagranie
+    typ: dzwiek
+    etykieta: {pl: nagranie (melodia), en: recording (melody), fr: enregistrement (mélodie)}
+    wymagane: true
+    cel: ["@nagranie.audio"]
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: styl, en: style, fr: style}
+    cel: ["@gen.style"]
+  - id: slowa
+    typ: prompt
+    etykieta: {pl: słowa / struktura, en: lyrics / structure, fr: paroles / structure}
+    domyslnie: "[Intro]\n\n[Instrumental]\n\n[Instrumental]\n\n[Solo]\n\n[Outro]"
+    cel: ["@gen.lyrics"]
+  - id: dlugosc
+    typ: liczba
+    etykieta: {pl: maks. długość (s), en: max length (s), fr: durée max. (s)}
+    domyslnie: 120
+    min: 10
+    max: 360
+    krok: 10
+    cel: ["@gen.max_duration"]
+  - id: seed
+    typ: seed
+    cel: ["@seed_node.seed"]

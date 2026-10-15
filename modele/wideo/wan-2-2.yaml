@@ -1,0 +1,26 @@
+id: wan-2-2
+nazwa: WAN 2.2
+obszar: wideo
+zapas_api: [wan-3, kling-3]   # zadanie > 10 min → propozycja API
+kolejnosc: 50
+poradnik: wan-2-2
+licencja: Apache 2.0
+opis:
+  pl: "Wideo bez dźwięku, do 5 s (maksimum natywne). Z samego tekstu, z pierwszą klatką albo z pierwszą i ostatnią."
+  en: "Silent video, up to 5 s (native maximum). From text, a first frame, or first and last frames."
+  fr: "Vidéo sans son, jusqu'à 5 s (maximum natif). À partir du seul texte, d'une première image, ou d'une première et d'une dernière image."
+backend: comfyui
+wyjscie: wideo
+parametry_z: wan-2-2-tekst
+warianty:
+  - {model: wan-2-2-klatki, gdy: [klatka_start, klatka_koniec]}
+  - {model: wan-2-2-obraz, gdy: [klatka_start], mapa: {klatka_start: obraz}}
+  - {model: wan-2-2-tekst, gdy: []}
+wejscia:
+  - id: klatka_start
+    typ: obraz
+    etykieta: {pl: pierwsza klatka (opcjonalnie), en: first frame (optional), fr: première image (facultatif)}
+  - id: klatka_koniec
+    typ: obraz
+    wymaga: [klatka_start]
+    etykieta: {pl: ostatnia klatka (opcjonalnie; razem z pierwszą), en: last frame (optional; with the first), fr: dernière image (facultatif ; avec la première)}

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ T.tytul }}{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css?v=16">
+<script>window.T = {{ T_json | safe }}; window.LOGIN = {{ (login or '') | tojson }}; window.LANG = {{ lang | tojson }};</script>
+</head>
+<body data-obszar="{{ obszar or '' }}">
+{% block top %}
+<header class="top">
+  <a class="home" href="/">{{ T.tytul }}</a>
+  {% block crumb %}{% endblock %}
+  <span class="spacer"></span>
+  {% if login %}<a class="link" href="#" data-notatki>{{ T.notatki }}</a>{% endif %}
+  <a class="link" href="/galeria">{{ T.galeria }}</a>
+  <span class="langs">{% for j in jezyki %}{% if j == lang %}<b class="lang on">{{ j }}</b>{% else %}<a class="link lang" href="/jezyk/{{ j }}" title="{{ T['jezyk.' ~ j] }}">{{ j }}</a>{% endif %}{% endfor %}</span>
+  {% if login %}<a class="link budzet" href="#" id="budzet"></a>{% endif %}
+  <span class="who">{{ login }}</span>
+  <a class="link" href="/wyloguj">{{ T.wyloguj }}</a>
+</header>
+{% endblock %}
+{% block body %}{% endblock %}
+<script src="/static/common.js?v=13"></script>
+{% if login %}<script src="/static/notatki.js?v=7"></script>{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

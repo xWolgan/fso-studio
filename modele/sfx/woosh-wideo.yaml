@@ -1,0 +1,62 @@
+id: woosh-wideo
+nazwa: Woosh — dźwięk do wideo
+nazwy: {en: "Woosh — sound for video", fr: "Woosh — son pour vidéo"}
+obszar: sfx
+kolejnosc: 11
+licencja: {pl: "Sony AI — niekomercyjna (badania)", en: "Sony AI — non-commercial (research)", fr: "Sony AI — non commerciale (recherche)"}
+poradnik: woosh
+opis:
+  pl: "Dźwięk zsynchronizowany z obrazem: model patrzy na pierwsze 8 s klipu i dopisuje do nich efekty. Wynik: dźwięk i klip z nowym dźwiękiem."
+  en: "Sound synchronised to picture: the model watches the first 8 s of a clip and adds effects. Result: audio and the clip with the new sound."
+  fr: "Son synchronisé avec l'image : le modèle regarde les 8 premières secondes du clip et y ajoute des effets. Résultat : le son seul et le clip avec le nouveau son."
+uwagi:
+  pl: "Opis jest opcjonalny — podpowiada, czego słuchać (np. „kroki na śniegu, wiatr”). Okno: 8 s od wybranego początku."
+  en: "The description is optional — it hints what to listen for (e.g. \"footsteps in snow, wind\"). Window: 8 s from the chosen start."
+  fr: "La description est facultative — elle indique ce qu'il faut écouter (par ex. « pas dans la neige, vent »). Fenêtre : 8 s à partir du début choisi."
+backend: http
+usluga: woosh
+endpoint: /v2a
+format: form
+odpowiedz: json_plik
+pliki: [plik, wideo]
+wyjscie: dzwiek
+wejscia:
+  - id: wideo
+    typ: wideo
+    etykieta: {pl: klip wideo, en: video clip, fr: clip vidéo}
+    wymagane: true
+    cel: video
+parametry:
+  - id: prompt
+    typ: prompt
+    etykieta: {pl: opis (opcjonalnie), en: description (optional), fr: description (facultatif)}
+    opcjonalny: true
+    cel: [prompt]
+  - id: start
+    typ: ulamek
+    etykieta: {pl: początek okna (s), en: window start (s), fr: début de la fenêtre (s)}
+    domyslnie: 0
+    min: 0
+    max: 60
+    krok: 0.5
+    cel: [start]
+  - id: tryb
+    typ: tryb
+    etykieta: {pl: tryb, en: mode, fr: mode}
+    domyslnie: szybki
+    opcje_cele:
+      szybki: {mode: szybki}
+      jakosc: {mode: jakosc}
+  - id: cfg
+    typ: ulamek
+    etykieta: {pl: siła opisu (CFG), en: prompt strength (CFG), fr: force de la description (CFG)}
+    domyslnie: 3
+    min: 1
+    max: 10
+    krok: 0.5
+    zaawansowane: true
+    cel: [cfg]
+  - id: seed
+    typ: seed
+    max: 2147483647
+    cel: [seed]

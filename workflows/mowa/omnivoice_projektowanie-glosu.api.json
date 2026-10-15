@@ -1,0 +1,101 @@
+{
+ "5": {
+  "class_type": "SaveAudio",
+  "inputs": {
+   "audio": [
+    "projektant",
+    1
+   ],
+   "filename_prefix": "audio/test_omnivoice_glos_wzorzec"
+  }
+ },
+ "6": {
+  "class_type": "SaveAudio",
+  "inputs": {
+   "audio": [
+    "tts",
+    0
+   ],
+   "filename_prefix": "audio/test_omnivoice_glos_tekst"
+  }
+ },
+ "silnik_projekt": {
+  "class_type": "OmniVoiceEngineNode",
+  "inputs": {
+   "model_variant": "OmniVoice",
+   "device": "auto",
+   "language": "Polish",
+   "num_step": 32,
+   "guidance_scale": 2.0,
+   "t_shift": 0.1,
+   "speed": 1.0,
+   "duration": 0.0,
+   "mode": "Voice Design"
+  }
+ },
+ "projektant": {
+  "class_type": "UnifiedVoiceDesignerNode",
+  "inputs": {
+   "TTS_engine": [
+    "silnik_projekt",
+    0
+   ],
+   "seed": [
+    "seed32",
+    1
+   ],
+   "reference_text": "To jest próbka nowego głosu. Mówię spokojnie i wyraźnie, z lekką chrypką.",
+   "voice_instruction": "female, middle-aged, low pitch"
+  }
+ },
+ "silnik": {
+  "class_type": "OmniVoiceEngineNode",
+  "inputs": {
+   "model_variant": "OmniVoice",
+   "device": "auto",
+   "language": "Polish",
+   "num_step": 32,
+   "guidance_scale": 2.0,
+   "t_shift": 0.1,
+   "speed": 1.0,
+   "duration": 0.0,
+   "mode": "Text to Speech"
+  }
+ },
+ "tts": {
+  "class_type": "UnifiedTTSTextNode",
+  "inputs": {
+   "TTS_engine": [
+    "silnik",
+    0
+   ],
+   "text": "",
+   "narrator_voice": "none",
+   "seed": [
+    "seed32",
+    1
+   ],
+   "opt_narrator": [
+    "projektant",
+    0
+   ],
+   "enable_audio_cache": false
+  }
+ },
+ "seed_src": {
+  "class_type": "PrimitiveInt",
+  "inputs": {
+   "value": 0
+  }
+ },
+ "seed32": {
+  "class_type": "ComfyMathExpression",
+  "inputs": {
+   "expression": "a % 4294967296",
+   "values.a": [
+    "seed_src",
+    0
+   ]
+  }
+ }
+}

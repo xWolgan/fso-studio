@@ -1,0 +1,84 @@
+id: minimax-h3-referencje
+ukryty: true
+nazwa: MiniMax H3 · referencje
+nazwy: {en: "MiniMax H3 · references", fr: "MiniMax H3 · références"}
+obszar: wideo
+kolejnosc: 12
+poradnik: minimax-h3
+licencja: MiniMax (otwarte wagi)
+opis:
+  pl: "Wideo z dźwiękiem na podstawie referencji — do 3 obrazów (postaci, przedmioty, miejsca), klipu wideo i nagrania. Do 15 s."
+  en: "Video with sound from references — up to 3 images (characters, objects, places), a video clip and an audio recording. Up to 15 s."
+  fr: "Vidéo avec son à partir de références — jusqu'à 3 images (personnages, objets, lieux), un clip vidéo et un enregistrement. Jusqu'à 15 s."
+uwagi:
+  pl: "W prompcie odwołuj się do referencji znacznikami <Picture 1>, <Picture 2>, <Picture 3>, <Video 1>, <Audio 1> — w kolejności pól poniżej. Wideo referencyjne: 2–15 s, najlepiej 24 kl./s."
+  en: "Refer to references in the prompt with the tags <Picture 1>, <Picture 2>, <Picture 3>, <Video 1>, <Audio 1> — in the order of the fields below. Reference video: 2–15 s, ideally 24 fps."
+  fr: "Dans le prompt, désigne les références par les balises <Picture 1>, <Picture 2>, <Picture 3>, <Video 1>, <Audio 1> — dans l'ordre des champs ci-dessous. Vidéo de référence : 2–15 s, idéalement 24 i/s."
+backend: comfyui
+workflow: wideo/h3_referencje_lista.api.json
+wyjscie: wideo
+wejscia:
+  - id: obrazy
+    typ: obraz
+    wiele: 9
+    znacznik: "<Picture {n}>"
+    wezly: {"{id}": {class_type: LoadImage, inputs: {image: "{plik}"}}}
+    podlacz: {"@h3ref.ref_images.ref_image_{i}": ["{id}", 0]}
+  - id: wideo
+    typ: wideo
+    wiele: 3
+    znacznik: "<Video {n}>"
+    wezly:
+      "{id}": {class_type: LoadVideo, inputs: {file: "{plik}"}}
+      "{id}_kl": {class_type: GetVideoComponents, inputs: {video: ["{id}", 0]}}
+    podlacz: {"@h3ref.ref_videos.ref_video_{i}": ["{id}_kl", 0]}
+  - id: dzwieki
+    typ: dzwiek
+    wiele: 3
+    znacznik: "<Audio {n}>"
+    wezly: {"{id}": {class_type: LoadAudio, inputs: {audio: "{plik}"}}}
+    podlacz: {"@h3ref.ref_audios.ref_audio_{i}": ["{id}", 0]}
+parametry:
+  - id: prompt
+    typ: prompt
+    cel: ["@prompt_tekst.value"]
+  - id: proporcje
+    typ: proporcje
+    domyslnie: "16:9"
+    opcje: ["16:9", "21:9", "4:3", "1:1", "3:4", "9:16"]
+    cel_selektor: ["@rozdzielczosc.aspect_ratio"]
+  - id: rozdzielczosc
+    typ: tryb
+    etykieta: {pl: rozdzielczość, en: resolution, fr: résolution}
+    domyslnie: "480p"
+    pomoc:
+      pl: "480p (ok. 0,4 MP) — szybko; 720p (ok. 0,9 MP) — wyraźnie dłużej i więcej pamięci. Otwarte wagi H3 obsługują do 768p."
+      en: "480p (about 0.4 MP) — fast; 720p (about 0.9 MP) — much slower and more memory. Open H3 weights support up to 768p."
+      fr: "480p (env. 0,4 MP) — rapide ; 720p (env. 0,9 MP) — nettement plus long et plus gourmand en mémoire. Les poids ouverts de H3 vont jusqu'à 768p."
+    opcje_cele:
+      "480p": {"@rozdzielczosc.megapixels": 0.4}
+      "720p": {"@rozdzielczosc.megapixels": 0.9}
+  - id: dlugosc
+    typ: dlugosc
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 10
+    min: 1
+    max: 15
+    krok: 0.5
+    fps: 24
+    klatki: "17n+5"
+    cel_sekundy: ["@sekundy.value"]
+  - id: tryb
+    typ: tryb
+    etykieta: {pl: tryb, en: mode, fr: mode}
+    domyslnie: szybki
+    pomoc:
+      pl: "Szybki — LoRA turbo (4 kroków). Jakość — 20 kroków, kilka razy dłużej."
+      en: "Fast — turbo LoRA (4 steps). Quality — 20 steps, several times slower."
+      fr: "Rapide — LoRA turbo (4 étapes). Qualité — 20 étapes, plusieurs fois plus long."
+    opcje_cele:
+      szybki: {"@turbo.value": true}
+      jakosc: {"@turbo.value": false}
+  - id: seed
+    typ: seed
+    cel: ["@szum.noise_seed"]

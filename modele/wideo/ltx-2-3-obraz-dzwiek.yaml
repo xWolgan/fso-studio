@@ -1,0 +1,70 @@
+id: ltx-2-3-obraz-dzwiek
+ukryty: true
+nazwa: LTX 2.3 · obraz + dźwięk → wideo
+nazwy: {en: "LTX 2.3 · image + sound → video", fr: "LTX 2.3 · image + son → vidéo"}
+obszar: wideo
+kolejnosc: 43
+poradnik: ltx-2-3
+licencja: LTX-2 Community
+opis:
+  pl: "Obraz ożywiony do podanego dźwięku — np. postać mówiąca nagraną kwestię. Długość przycina dźwięk."
+  en: "An image animated to a given sound — e.g. a character speaking a recorded line. The length trims the audio."
+  fr: "Une image animée sur un son donné — par ex. un personnage qui dit une réplique enregistrée. La durée coupe le son."
+uwagi:
+  pl: "Dwa etapy (połowa rozdzielczości + upscaler ×2). Dźwięk powstaje razem z obrazem — opisz go w prompcie. Długi, ciągły opis akcji działa lepiej niż lista słów."
+  en: "Two stages (half resolution + ×2 upscaler). Sound is generated together with the picture — describe it in the prompt. A long, continuous description of the action works better than a list of words."
+  fr: "Deux étapes (demi-résolution + upscaler ×2). Le son est généré en même temps que l'image — décris-le dans le prompt. Une description longue et continue de l'action fonctionne mieux qu'une liste de mots."
+backend: comfyui
+workflow: wideo/ltx_23_obraz-i-dzwiek-na-wideo.api.json
+wyjscie: wideo
+wejscia:
+  - id: obraz
+    typ: obraz
+    etykieta: {pl: obraz startowy, en: start image, fr: image de départ}
+    wymagane: true
+    cel: ["@obraz.image"]
+  - id: dzwiek
+    typ: dzwiek
+    etykieta: {pl: "dźwięk (np. mowa, muzyka)", en: "audio (e.g. speech, music)", fr: "son (par ex. voix, musique)"}
+    wymagane: true
+    cel: ["@dzwiek.audio"]
+parametry:
+  - id: prompt
+    typ: prompt
+    cel: ["@prompt_tekst.value"]
+  - id: proporcje
+    typ: proporcje
+    domyslnie: "16:9"
+    opcje: ["16:9", "21:9", "4:3", "1:1", "3:4", "9:16"]
+    megapiksele: 0.88
+    wielokrotnosc: 32
+    cel_szerokosc: ["@szer.value"]
+    cel_wysokosc: ["@wys.value"]
+  - id: dlugosc
+    typ: dlugosc
+    etykieta: {pl: długość (s), en: length (s), fr: durée (s)}
+    domyslnie: 10
+    min: 1
+    max: 20
+    krok: 0.5
+    fps_param: fps
+    cel_sekundy: ["@sekundy.value"]
+  - id: fps
+    typ: wybor
+    etykieta: {pl: klatki na sekundę, en: frames per second, fr: images par seconde}
+    domyslnie: 24
+    opcje: [24, 25]
+    cel: ["@fps.value"]
+  - id: rozbudowa
+    typ: przelacznik
+    etykieta: {pl: model sam rozbudowuje prompt, en: model expands the prompt, fr: le modèle enrichit lui-même le prompt}
+    pomoc:
+      pl: "Wbudowany LLM (Gemma) przepisuje prompt na bardziej szczegółowy przed generowaniem. Domyślnie wyłączone."
+      en: "A built-in LLM (Gemma) rewrites the prompt into a more detailed one before generation. Off by default."
+      fr: "Un LLM intégré (Gemma) réécrit le prompt de façon plus détaillée avant la génération. Désactivé par défaut."
+    domyslnie: false
+    zaawansowane: true
+    cel: ["@rozbudowa.value"]
+  - id: seed
+    typ: seed
+    cel: ["@szum.noise_seed"]
