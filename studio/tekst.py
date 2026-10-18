@@ -3,8 +3,9 @@
 Rozmowy: zasoby/<login>/rozmowy/<id>.json — widzi je tylko autor (żadna galeria ich nie pokazuje).
 Artefakty: zasoby/<login>/artefakty/<nazwa>.md — zwykłe zasoby (rodzaj „tekst”), widoczne w innych obszarach.
 LLM: zgodny z OpenAI. Najpierw API z config.yaml → `llm_api` (OpenRouter, klucz w zmiennej środowiskowej),
-gdy go brak albo nie odpowiada — lokalny llama-swap (`llm_url`).
+gdy nie odpowiada — modele zapasowe z `llm_api.zapasowe`, a na końcu (opcjonalnie) lokalny LLM (`llm_url`).
 """
+import asyncio
 import json
 import os
 import re
@@ -22,8 +23,8 @@ from .registry import MODELS, by_area
 from .i18n import JEZYKI, K, L, przetlumacz
 
 router = APIRouter()
-LLM_URL = CFG.get("llm_url", "http://127.0.0.1:9292/v1").rstrip("/")
-LLM_API = CFG.get("llm_api") or {}          # zewnętrzne API; lokalny LLM zostaje zapasem
+LLM_URL = (CFG.get("llm_url") or "").rstrip("/")   # lokalny LLM (opcjonalny zapas); pusty = tylko API
+LLM_API = CFG.get("llm_api") or {}          # zewnętrzne API: model główny + zapasowe (llm_api.zapasowe)
 PROMPTY = ROOT / "prompty"
 HISTORIA_ZNAKOW = 60000           # ile ostatnich znaków rozmowy idzie do modelu
 
@@ -232,22 +233,34 @@ def _tytul_biblii(sciezka: str) -> str:
 
 
 def _cele(body: dict) -> list[tuple[str, dict, dict]]:
-    """Dokąd wysłać zapytanie: najpierw API (gdy skonfigurowane i jest klucz), potem lokalny LLM jako zapas.
+    """Dokąd wysłać zapytanie: model wybrany w obszarze Tekst (stale.api_model), potem główny z llm_api, zapasowe,
+    na końcu (opcjonalnie) lokalny LLM.
     Zwraca listę (adres, nagłówki, treść zapytania)."""
     cele = []
     klucz = os.environ.get(LLM_API.get("klucz_env", ""), "") if LLM_API else ""
     if klucz:
-        b = {k: v for k, v in body.items() if k != "chat_template_kwargs"}
-        b["model"] = LLM_API["model"]
-        b["reasoning"] = {"enabled": bool((body.get("chat_template_kwargs") or {}).get("enable_thinking"))}
-        if LLM_API.get("dostawcy"):
-            b["provider"] = {"order": LLM_API["dostawcy"], "allow_fallbacks": False}
-        b["usage"] = {"include": True}
-        cele.append((LLM_API["url"].rstrip("/"), {"Authorization": f"Bearer {klucz}"}, b))
-    lok = dict(body)
-    if any(isinstance(x.get("content"), list) for x in body.get("messages", [])):
-        lok["messages"] = [{**x, "content": zalaczniki.tylko_tekst(x["content"], S["zal_lokalny"]["pl"])} for x in body["messages"]]
-    cele.append((LLM_URL, {}, lok))
+        url, nagl = LLM_API["url"].rstrip("/"), {"Authorization": f"Bearer {klucz}"}
+        mw = MODELS.get(body.get("model") or "")
+        wybrany = (mw.stale.get("api_model") if mw else None) or None             # model z listy w obszarze Tekst
+        kolejka = ([wybrany] if wybrany else []) + [LLM_API["model"]] + list(LLM_API.get("zapasowe") or [])
+        for i, model in enumerate(dict.fromkeys(kolejka)):
+            b = {k: v for k, v in body.items() if k != "chat_template_kwargs"}
+            b["model"] = model
+            b["reasoning"] = {"enabled": bool((body.get("chat_template_kwargs") or {}).get("enable_thinking"))
+                              or (model == wybrany and mw.stale.get("myslenie") == "zawsze")}   # np. GLM: nie da się wyłączyć
+            if model == LLM_API["model"] and LLM_API.get("dostawcy"):
+                b["provider"] = {"order": LLM_API["dostawcy"], "allow_fallbacks": False}
+            else:                                    # pozostałe: dowolny dostawca, ale bez zbierania danych z rozmów
+                b["provider"] = {"data_collection": "deny"}
+            b["usage"] = {"include": True}
+            cele.append((url, nagl, b))
+            if i == 0:                               # pierwszy model drugi raz (chwilowe 429 / pusta odpowiedź)
+                cele.append((url, nagl, b))
+    if LLM_URL:                                      # lokalny LLM tylko, gdy jest w config.yaml (llm_url)
+        lok = dict(body)
+        if any(isinstance(x.get("content"), list) for x in body.get("messages", [])):
+            lok["messages"] = [{**x, "content": zalaczniki.tylko_tekst(x["content"], S["zal_lokalny"]["pl"])} for x in body["messages"]]
+        cele.append((LLM_URL, {}, lok))
     return cele
 
 
@@ -419,10 +432,13 @@ async def wyslij(req: Request, rid: str):
     body = {"model": m.stale.get("llm_model", m.id), "messages": msgs, "stream": True,
             "temperature": float(d.get("temperatura", 0.4 if r.get("tryb") in ("lustro", "prompt") else m.stale.get("temperatura", 0.7))),
             "chat_template_kwargs": {"enable_thinking": bool(d.get("mysl", False))}}
+    # research w lustrze tylko wtedy, gdy obowiązujący prompt lustra o nim mówi (uczestnik może go wyciąć w swojej kopii)
+    research = bool(narzedzia.SEARX_URL) and (r.get("tryb") != "lustro"
+                                              or "szukaj_w_sieci" in prompty.tresc(u, "lustro", None, jezyk_rozmowy(r)))
     if m.stale.get("narzedzia", True):
         dozwolone = NARZEDZIA_TRYBU.get(r.get("tryb") or "rozmowa", NARZEDZIA_TRYBU["rozmowa"])
         body["tools"] = [t for t in narzedzia.spec(jezyk_rozmowy(r)) if t["function"]["name"] in dozwolone
-                         and (narzedzia.SEARX_URL or t["function"]["name"] != "szukaj_w_sieci")]
+                         and (research or t["function"]["name"] != "szukaj_w_sieci")]
 
     jez = jezyk_rozmowy(r)
 
@@ -438,7 +454,7 @@ async def wyslij(req: Request, rid: str):
         zrodla = ""                                       # wszystko, co zwróciło wyszukiwanie — do sprawdzenia adresów
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(900, connect=10)) as c:
-                if r.get("tryb") == "lustro" and narzedzia.SEARX_URL:
+                if r.get("tryb") == "lustro" and research:
                     # research PRZED odpowiedzią: model układa zapytanie, Studio szuka, wyniki idą do kontekstu —
                     # dzięki temu przywołuje tylko to, co naprawdę znalazł (bez źródeł z pamięci)
                     zap = await _zapytanie_do_researchu(c, body["model"], hist)
@@ -450,25 +466,28 @@ async def wyslij(req: Request, rid: str):
                         zrodla += wynik
                         body["messages"][0]["content"] += tx("wyniki", jez, q=zap, w=wynik)
                 cele = _cele(body)
-                for _ in range(8):                                   # najwyżej 8 rund narzędzi
-                    wywolania = {}
-                    while True:                                      # API niedostępne → lokalny LLM (bez przerwy w rozmowie)
+                for _ in range(8):                                   # najwyżej 8 rund (narzędzia + ponowienia pustych odpowiedzi)
+                    wywolania, koniec = {}, None
+                    while True:                                      # błąd API → następny cel (bez przerwy w rozmowie)
                         url, nagl, b = cele[0]
                         b["messages"] = body["messages"]
                         resp_cm = c.stream("POST", url + "/chat/completions", json=b, headers=nagl)
                         try:
                             resp = await resp_cm.__aenter__()
-                        except httpx.HTTPError:
+                        except httpx.HTTPError as e:
                             if len(cele) > 1:
+                                print(f"LLM {b.get('model')}: {e!r} — następny cel", flush=True)
                                 cele.pop(0)
+                                await asyncio.sleep(2)
                                 continue
                             raise
                         if resp.status_code != 200:
                             tresc = (await resp.aread())[:300]
                             await resp_cm.__aexit__(None, None, None)
                             if len(cele) > 1:
-                                print(f"LLM API {resp.status_code}: {tresc!r} — przełączam na lokalny", flush=True)
+                                print(f"LLM {b.get('model')} {resp.status_code}: {tresc!r} — następny cel", flush=True)
                                 cele.pop(0)
+                                await asyncio.sleep(2)
                                 continue
                             raise RuntimeError(K("e_llm", m=f"{resp.status_code}: {tresc!r}"))
                         break
@@ -477,6 +496,10 @@ async def wyslij(req: Request, rid: str):
                             if not line.startswith("data: ") or line.strip() == "data: [DONE]":
                                 continue
                             chunk = json.loads(line[6:])
+                            if chunk.get("error"):                   # błąd dostawcy w środku strumienia
+                                print(f"LLM {b.get('model')} błąd w strumieniu: {str(chunk['error'])[:200]}", flush=True)
+                                koniec = koniec or "error"
+                            koniec = (chunk.get("choices") or [{}])[0].get("finish_reason") or koniec
                             if chunk.get("usage") and nagl:
                                 _zapisz_uzycie(u, r.get("tryb") or "rozmowa", chunk["usage"])
                             delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
@@ -495,6 +518,14 @@ async def wyslij(req: Request, rid: str):
                                 w["args"] += fn.get("arguments") or ""
                     finally:
                         await resp_cm.__aexit__(None, None, None)
+                    if not wywolania and not "".join(odp).strip():   # strumień urwany albo pusty — nic nie przyszło
+                        print(f"LLM {b.get('model')}: pusta odpowiedź (finish={koniec})"
+                              + (" — następny cel" if len(cele) > 1 else ""), flush=True)
+                        if len(cele) > 1:
+                            cele.pop(0)
+                            await asyncio.sleep(2)
+                            continue
+                        raise RuntimeError(K("e_llm_pusta"))
                     if not wywolania:
                         break
                     body["messages"].append({"role": "assistant", "content": "".join(odp) or None, "tool_calls": [
@@ -528,7 +559,9 @@ async def wyslij(req: Request, rid: str):
                             nowa_biblia = sc.group(0).split("/", 1)[-1] if sc else None
                         body["messages"].append({"role": "tool", "tool_call_id": w["id"] or f"w{i}", "content": wynik})
                     odp = []
-        except httpx.ConnectError:                      # ani API (brak klucza / nie odpowiada), ani lokalny LLM
+                if not "".join(odp).strip() and not zapisane_prompty:   # wyczerpane rundy — nie zostawiamy samych kropek
+                    raise RuntimeError(K("e_llm_pusta"))
+        except httpx.ConnectError:                     # ani API (brak klucza / nie odpowiada), ani lokalny LLM
             yield "data: " + json.dumps({"blad": przetlumacz(K("e_brak_llm"), jez)}, ensure_ascii=False) + "\n\n"
         except Exception as e:
             yield "data: " + json.dumps({"blad": przetlumacz(str(e), jez)[:400]}, ensure_ascii=False) + "\n\n"

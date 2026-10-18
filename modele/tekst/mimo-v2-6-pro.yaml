@@ -1,0 +1,14 @@
+id: mimo-v2-6-pro
+nazwa: MiMo V2.6 Pro
+obszar: tekst
+kolejnosc: 30
+licencja: "API — warunki dostawcy"
+opis:
+  pl: "MiMo V2.6 Pro (Xiaomi, ponad 1T parametrów) przez API (OpenRouter). Duży model, rozumie obrazy; ok. 2× koszt Qwena. Rozmowa jest wysyłana do dostawcy (bez zbierania danych); gdy nie odpowiada — odpowiada Qwen 3.8 Flash."
+  en: "MiMo V2.6 Pro (Xiaomi, over 1T parameters) via API (OpenRouter). A large model, understands images; about 2× Qwen's cost. The conversation is sent to the provider (no data collection); when it doesn't respond, Qwen 3.8 Flash answers."
+  fr: "MiMo V2.6 Pro (Xiaomi, plus de 1T paramètres) via API (OpenRouter). Un grand modèle, comprend les images ; environ 2× le coût de Qwen. La conversation est envoyée au fournisseur (sans collecte de données) ; s'il ne répond pas, c'est Qwen 3.8 Flash qui répond."
+backend: llm
+wyjscie: tekst
+stale:
+  api_model: xiaomi/mimo-v2.6-pro
+  temperatura: 0.7

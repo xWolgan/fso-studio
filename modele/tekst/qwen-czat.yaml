@@ -4,9 +4,9 @@ obszar: tekst
 kolejnosc: 10
 licencja: Apache 2.0
 opis:
-  pl: "Główny model rozmowy: Qwen 3.8 Flash przez API (OpenRouter → Alibaba Cloud), dobrze po polsku, rozumie obrazy. Rozmowa jest wysyłana do dostawcy; gdy API nie działa, odpowiada lokalny Qwen 3.8 Flash Next na Sparku."
-  en: "Main conversation model: Qwen 3.8 Flash via API (OpenRouter → Alibaba Cloud), good in Polish, understands images. The conversation is sent to the provider; when the API is down, the local Qwen 3.8 Flash Next on the Spark answers."
-  fr: "Modèle principal de conversation : Qwen 3.8 Flash via API (OpenRouter → Alibaba Cloud), à l'aise en polonais, comprend les images. La conversation est envoyée au fournisseur ; quand l'API ne répond pas, c'est le Qwen 3.8 Flash Next local sur le Spark qui répond."
+  pl: "Główny model rozmowy: Qwen 3.8 Flash przez API (OpenRouter → Alibaba Cloud), dobrze po polsku, rozumie obrazy. Rozmowa jest wysyłana do dostawcy; gdy Alibaba chwilowo nie odpowiada, odpowiada zapasowy Qwen 3.8 27B."
+  en: "Main conversation model: Qwen 3.8 Flash via API (OpenRouter → Alibaba Cloud), good in Polish, understands images. The conversation is sent to the provider; when Alibaba is briefly unavailable, the backup Qwen 3.8 27B answers."
+  fr: "Modèle principal de conversation : Qwen 3.8 Flash via API (OpenRouter → Alibaba Cloud), à l'aise en polonais, comprend les images. La conversation est envoyée au fournisseur ; quand Alibaba est momentanément indisponible, c'est le Qwen 3.8 27B de secours qui répond."
 backend: llm
 wyjscie: tekst
 stale:

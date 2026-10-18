@@ -8,6 +8,26 @@ Licencje modeli są ich własne (pole „licencja” w YAML) — część jest *
 
 ## Tekst
 
+### DeepSeek V4.1 Flash (`deepseek-v4-1-flash`)
+
+Licencja: API — warunki dostawcy  
+Model językowy przez API zgodne z OpenAI (`llm_api`, np. OpenRouter) albo lokalnie (`llm_url`, np. llama-swap / Ollama).
+
+### GLM 5.3 FlashX (`glm-5-3-flashx`)
+
+Licencja: API — warunki dostawcy  
+Model językowy przez API zgodne z OpenAI (`llm_api`, np. OpenRouter) albo lokalnie (`llm_url`, np. llama-swap / Ollama).
+
+### MiMo V2.6 Pro (`mimo-v2-6-pro`)
+
+Licencja: API — warunki dostawcy  
+Model językowy przez API zgodne z OpenAI (`llm_api`, np. OpenRouter) albo lokalnie (`llm_url`, np. llama-swap / Ollama).
+
+### Mistral Large 4 (`mistral-large-4`)
+
+Licencja: API — warunki dostawcy  
+Model językowy przez API zgodne z OpenAI (`llm_api`, np. OpenRouter) albo lokalnie (`llm_url`, np. llama-swap / Ollama).
+
 ### Qwen 3.8 Flash (`qwen-czat`)
 
 Licencja: Apache 2.0  
