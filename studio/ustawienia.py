@@ -43,6 +43,7 @@ def _dostawcy() -> list:
     for d, x in dostawcy.DOSTAWCY.items():
         kat = dostawcy.katalog(d)
         out.append({"id": d, "nazwa": x["nazwa"], "klucz_url": x["klucz_url"], "format": x.get("format"),
+                    "adres": x.get("adres"), "adres_teraz": dostawcy.klucz(d) if x.get("adres") else None,   # adres nie jest tajny
                     "ma_klucz": bool(dostawcy.klucz(d)), "katalog_czas": (kat or {}).get("czas"),
                     "liczba": len((kat or {}).get("modele") or []), "wybrane": dostawcy.wybrane(d)})
     return out

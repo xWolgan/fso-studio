@@ -238,6 +238,10 @@ def _cel_u_dostawcy(d: str, api_model: str, body: dict, obrazy: bool) -> tuple[s
     mysl = bool((body.get("chat_template_kwargs") or {}).get("enable_thinking"))
     b = {k: v for k, v in body.items() if k != "chat_template_kwargs"}
     b["model"] = api_model
+    if d == "lokalne":                                       # Ollama / LM Studio: bez klucza, bez opłat
+        if not obrazy and any(isinstance(x.get("content"), list) for x in body.get("messages", [])):
+            b["messages"] = [{**x, "content": zalaczniki.tylko_tekst(x["content"], S["zal_lokalny"]["pl"])} for x in body["messages"]]
+        return dostawcy.adres_lokalny(), {}, b
     if not obrazy and any(isinstance(x.get("content"), list) for x in body.get("messages", [])):
         b["messages"] = [{**x, "content": zalaczniki.tylko_tekst(x["content"], S["zal_lokalny"]["pl"])} for x in body["messages"]]
     if d == "openrouter":
@@ -500,6 +504,9 @@ async def wyslij(req: Request, rid: str):
                         if resp.status_code != 200:
                             tresc = (await resp.aread())[:300]
                             await resp_cm.__aexit__(None, None, None)
+                            if resp.status_code in (400, 500) and b"tools" in tresc.lower() and b.get("tools"):
+                                b.pop("tools", None)                 # model lokalny bez narzędzi — rozmowa bez nich
+                                continue
                             if resp.status_code == 400 and b"easoning is mandatory" in tresc and (b.get("reasoning") or {}).get("enabled") is False:
                                 b["reasoning"] = {"enabled": True}       # model, który zawsze „myśli” (np. GLM FlashX)
                                 continue

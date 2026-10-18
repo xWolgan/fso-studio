@@ -25,6 +25,7 @@ the areas. You can change the selection at any time.
 | **Claude** (Anthropic) | text | https://console.anthropic.com/settings/keys |
 | **ChatGPT** (OpenAI) | text, image, speech | https://platform.openai.com/api-keys |
 | **Gemini** (Google) | text, image | https://aistudio.google.com/apikey |
+| **Local** (Ollama, LM Studio, llama.cpp) | text on your own computer — free, nothing leaves your machine; a server address instead of a key | https://ollama.com/download |
 
 One key is enough to start — e.g. **OpenRouter** gives you text, image, video and speech. Models marked “support coming
 soon” in Settings are visible but not yet available (e.g. Lyria music, Gemini video and speech).

@@ -35,6 +35,9 @@ DOSTAWCY = {
                "chat": "https://api.openai.com/v1"},
     "gemini": {"nazwa": "Gemini (Google)", "klucz_env": "GEMINI_API_KEY", "klucz_url": "https://aistudio.google.com/apikey",
                "chat": "https://generativelanguage.googleapis.com/v1beta/openai"},
+    # modele na tym komputerze: zamiast klucza — adres serwera zgodnego z OpenAI (Ollama, LM Studio, llama.cpp)
+    "lokalne": {"nazwa": "Lokalnie (Ollama / LM Studio)", "klucz_env": "LOKALNY_LLM_URL", "klucz_url": "https://ollama.com/download",
+                "adres": "http://127.0.0.1:11434/v1"},
 }
 OBSZARY_CHMURY = ("tekst", "obraz", "wideo", "muzyka", "sfx", "mowa")
 TIMEOUT = httpx.Timeout(60, connect=15)
@@ -66,8 +69,14 @@ def zapisz_klucz(d: str, wartosc: str):
     _KLIENCI.pop(d, None)
 
 
+def adres_lokalny() -> str:
+    return klucz("lokalne").rstrip("/")
+
+
 def naglowki(d: str) -> dict:
     k = klucz(d)
+    if d == "lokalne":
+        return {}
     if d == "fal" or d == "higgsfield":
         return {"Authorization": f"Key {k}"}
     if d == "anthropic":
@@ -85,7 +94,15 @@ _KLIENCI: dict = {}
 async def sprawdz(d: str) -> tuple[bool, str]:
     """(działa?, krótki opis) — najtańsze zapytanie, które wymaga ważnego klucza."""
     if not klucz(d):
-        return False, "brak klucza"
+        return False, "brak adresu" if d == "lokalne" else "brak klucza"
+    if d == "lokalne":
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(10, connect=5)) as c:
+                r = await c.get(adres_lokalny() + "/models")
+            n = len(r.json().get("data") or []) if r.status_code == 200 else None
+        except Exception as e:
+            return False, f"serwer nie odpowiada ({type(e).__name__}) — czy Ollama / LM Studio jest uruchomione?"
+        return (n is not None), (f"działa · modeli: {n}" if n is not None else f"odpowiedź {r.status_code}")
     url = {"openrouter": "https://openrouter.ai/api/v1/key",
            "fal": "https://api.fal.ai/v1/models?limit=1",
            "kie": "https://api.kie.ai/api/v1/chat/credit",
@@ -255,6 +272,15 @@ async def _gemini(c) -> list:
     return out
 
 
+async def _lokalne(c) -> list:
+    r = await c.get(adres_lokalny() + "/models")
+    r.raise_for_status()
+    return [_poz(m["id"], m["id"], "tekst", "Model na tym komputerze — bez kosztów, treść nie wychodzi na zewnątrz. "
+                 "Mniejsze modele słabiej radzą sobie z narzędziami Studia (zapis do biblii, zapis promptów).",
+                 obslugiwany=True, narzedzia=True, lokalny=True)
+            for m in r.json().get("data", []) if not re.search(r"embed", m["id"], re.I)]
+
+
 def _z_repo(dostawca: str) -> list:
     """HiggsField / Kie.ai: modele opisane w repo (modele/*/*.yaml z `dostawca:`) — te Studio już umie uruchomić."""
     out = []
@@ -285,7 +311,7 @@ async def pobierz_katalog(d: str) -> list:
     else:
         async with httpx.AsyncClient(timeout=TIMEOUT) as c:
             kat = await {"openrouter": _openrouter, "fal": _fal, "anthropic": _anthropic, "openai": _openai,
-                         "gemini": _gemini}[d](c)
+                         "gemini": _gemini, "lokalne": _lokalne}[d](c)
     kat.sort(key=lambda x: (OBSZARY_CHMURY.index(x["obszar"]), not x["obslugiwany"], x["nazwa"].lower()))
     KATALOGI.mkdir(parents=True, exist_ok=True)
     (KATALOGI / f"{d}.json").write_text(json.dumps({"czas": time.time(), "modele": kat}, ensure_ascii=False), encoding="utf-8")
@@ -308,7 +334,7 @@ def katalog(d: str) -> dict | None:
         elif d == "gemini":
             m["obslugiwany"] = m["obszar"] in ("tekst", "obraz")
         else:
-            m["obslugiwany"] = m["obszar"] == "tekst" if d == "anthropic" else True
+            m["obslugiwany"] = m["obszar"] == "tekst" if d in ("anthropic", "lokalne") else True
     return kat
 
 

@@ -4,10 +4,12 @@ const NA_GRUPE = 40;                                   // tyle pozycji w obszarz
 const BEZ_KLUCZA = ["openrouter", "fal", "higgsfield", "kie"];   // katalog widać i bez klucza
 
 function sekcja(d) {
-  const stanKlucza = h("span", { class: "u-stan " + (d.ma_klucz ? "ok" : "") }, d.ma_klucz ? T.u_jest_klucz : T.u_brak_klucza);
+  const jest = d.adres ? T.u_jest_adres : T.u_jest_klucz, brak = d.adres ? T.u_brak_adresu : T.u_brak_klucza;
+  const stanKlucza = h("span", { class: "u-stan " + (d.ma_klucz ? "ok" : "") }, d.ma_klucz ? jest : brak);
   const info = h("span", { class: "u-info" });
-  const pole = h("input", { type: "password", autocomplete: "off", spellcheck: "false",
-    placeholder: T.u_klucz + (d.format ? " · " + tf("u_format", { f: d.format }) : "") });
+  const pole = h("input", { type: d.adres ? "text" : "password", autocomplete: "off", spellcheck: "false",
+    placeholder: d.adres ? T.u_adres + " · " + d.adres : T.u_klucz + (d.format ? " · " + tf("u_format", { f: d.format }) : "") });
+  if (d.adres) pole.value = d.adres_teraz || d.adres;      // modele lokalne: adres serwera (domyślnie Ollama)
   const lista = h("div", { class: "u-modele" });
   const naglowekListy = h("span", {}, T.u_lista_modeli);
   const zwin = h("details", { class: "u-lista", hidden: !d.katalog_czas }, h("summary", {}, naglowekListy), lista);   // domyślnie zwinięta
@@ -15,7 +17,7 @@ function sekcja(d) {
   const pobierz = h("button", { class: "btn", disabled: !d.ma_klucz && !BEZ_KLUCZA.includes(d.id) },
     d.katalog_czas ? T.u_odswiez : T.u_pobierz);
 
-  const ustawStan = (ma) => { d.ma_klucz = ma; stanKlucza.textContent = ma ? T.u_jest_klucz : T.u_brak_klucza;
+  const ustawStan = (ma) => { d.ma_klucz = ma; stanKlucza.textContent = ma ? jest : brak;
     stanKlucza.classList.toggle("ok", ma); pobierz.disabled = !ma && !BEZ_KLUCZA.includes(d.id); };
   const pokazWynik = (r) => { info.textContent = r.info || ""; info.className = "u-info " + (r.ok ? "ok" : "err"); };
 
@@ -23,7 +25,7 @@ function sekcja(d) {
     info.textContent = "…"; info.className = "u-info";
     try {
       const r = await api("/api/ustawienia/klucz", { method: "POST", body: JSON.stringify({ dostawca: d.id, klucz: wartosc }) });
-      pole.value = ""; ustawStan(r.ma_klucz); pokazWynik(r);
+      pole.value = d.adres ? (wartosc || d.adres) : ""; ustawStan(r.ma_klucz); pokazWynik(r);
       if (r.ok && !d.katalog_czas) wczytaj(true);
     } catch (e) { info.textContent = e.message; info.className = "u-info err"; }
   };
@@ -43,11 +45,11 @@ function sekcja(d) {
 
   const el = h("section", { class: "u-dostawca" },
     h("div", { class: "u-nag" }, h("h2", {}, d.nazwa), stanKlucza, h("span", { style: "flex:1" }),
-      h("a", { class: "link", href: d.klucz_url, target: "_blank", rel: "noopener" }, T.u_gdzie_klucz + " ↗")),
+      h("a", { class: "link", href: d.klucz_url, target: "_blank", rel: "noopener" }, (d.adres ? T.u_gdzie_lokalne : T.u_gdzie_klucz) + " ↗")),
     h("div", { class: "u-klucz" }, pole,
       h("button", { class: "btn primary", onclick: () => pole.value.trim() && zapisz(pole.value.trim()) }, T.u_zapisz),
       h("button", { class: "btn", onclick: async () => { info.textContent = "…"; pokazWynik(await api("/api/ustawienia/sprawdz", { method: "POST", body: JSON.stringify({ dostawca: d.id }) })); } }, T.u_sprawdz),
-      h("button", { class: "btn quiet", onclick: () => d.ma_klucz && zapisz("") }, T.u_usun), info),
+      h("button", { class: "btn quiet", onclick: () => d.ma_klucz && zapisz("") }, d.adres ? T.u_usun_adres : T.u_usun), info),
     h("div", { class: "u-akcje" }, pobierz), zwin);
   pole.addEventListener("keydown", (e) => { if (e.key === "Enter" && pole.value.trim()) zapisz(pole.value.trim()); });
   if (d.katalog_czas) wczytaj(false);
@@ -83,11 +85,12 @@ function rysujModele(d, modele, wybrane, lista, liczby) {
   const rysuj = () => {
     const q = szukaj.value.trim().toLowerCase();
     const pasuje = (m) => (!tylko.checked || wybrane.has(m.id)) && (!q || (m.nazwa + " " + m.id).toLowerCase().includes(q));
+    const jedenObszar = new Set(modele.map((m) => m.obszar)).size === 1;   // np. lokalne, HiggsField — od razu rozwinięty
     grupy.replaceChildren(...OBSZARY.map((o) => {
       const ms = modele.filter((m) => m.obszar === o && pasuje(m));
       if (!ms.length) return null;
       const ileW = ms.filter((m) => wybrane.has(m.id)).length;
-      const box = h("details", { class: "u-grupa", open: Boolean(q || tylko.checked || otwarte.has(o)) },
+      const box = h("details", { class: "u-grupa", open: Boolean(q || tylko.checked || otwarte.has(o) || jedenObszar) },
         h("summary", {}, T["obszar." + o] || o, h("span", { class: "u-ile" }, " · " + ms.length + (ileW ? " · " + tf("u_wybrane", { n: ileW }) : ""))));
       box.addEventListener("toggle", () => { if (!q && !tylko.checked) box.open ? otwarte.add(o) : otwarte.delete(o); });
       ms.slice(0, NA_GRUPE).forEach((m) => box.append(wiersz(m)));
@@ -123,6 +126,7 @@ function sekcjaLimitu(limit) {
   const box = document.getElementById("dostawcy");
   try {
     const st = await api("/api/ustawienia");
-    box.replaceChildren(sekcjaLimitu(st.limit_usd), ...st.dostawcy.map(sekcja));
+    const ds = Array.isArray(st) ? st : (st.dostawcy || []);   // starszy serwer zwracał samą listę
+    box.replaceChildren(...(Array.isArray(st) ? [] : [sekcjaLimitu(st.limit_usd)]), ...ds.map(sekcja));
   } catch (e) { box.replaceChildren(h("p", { class: "u-puste err" }, e.message)); }
 })();
