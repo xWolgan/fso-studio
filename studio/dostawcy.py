@@ -49,7 +49,7 @@ def klucz(d: str) -> str:
 def zapisz_klucz(d: str, wartosc: str):
     """Zapis do sekrety.env (podmiana jednej linii, reszta pliku bez zmian) i od razu do środowiska procesu."""
     env = DOSTAWCY[d]["klucz_env"]
-    wartosc = (wartosc or "").strip().replace("\n", "")
+    wartosc = "".join(ch for ch in (wartosc or "").strip() if ch.isprintable() and ch not in "\r\n")   # jedna linia
     linie = SEKRETY.read_text(encoding="utf-8").splitlines() if SEKRETY.exists() else []
     nowa = f"{env}={wartosc}"
     for i, l in enumerate(linie):

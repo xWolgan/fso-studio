@@ -19,6 +19,25 @@ from .i18n import JEZYKI, K, L, przetlumacz, t
 from .registry import MODELS, by_area, lokalnie, wariant
 
 app = FastAPI(title="Studio")
+LOKALNE_HOSTY = {"127.0.0.1", "localhost", "[::1]", "::1"}
+
+
+@app.middleware("http")
+async def tylko_ze_studia(req: Request, call_next):
+    """Studio nie ma haseł, więc chroni się przed stronami z internetu otwartymi w tej samej przeglądarce:
+    - zapytania zmieniające coś (POST…) z innej strony (nagłówek Origin ≠ adres Studia) są odrzucane;
+    - w trybie jednego użytkownika Studio odpowiada tylko pod lokalną nazwą (127.0.0.1 / localhost) albo pod nazwami
+      z config.yaml → `hosty` — to zamyka atak przez podmianę DNS (DNS rebinding)."""
+    host = (req.headers.get("host") or "").rsplit(":", 1)[0] if not (req.headers.get("host") or "").startswith("[") \
+        else (req.headers.get("host") or "").split("]")[0] + "]"
+    dozwolone = LOKALNE_HOSTY | set(CFG.get("hosty") or [])
+    if CFG.get("uzytkownik") and host not in dozwolone:
+        return HTMLResponse("Studio: nieznany adres (dopisz go w config.yaml → hosty)", status_code=421)
+    if req.method not in ("GET", "HEAD", "OPTIONS"):
+        origin = req.headers.get("origin")
+        if origin and origin.split("://", 1)[-1].rstrip("/") != (req.headers.get("host") or ""):
+            return HTMLResponse("Studio: zapytanie z innej strony odrzucone", status_code=403)
+    return await call_next(req)
 from . import tekst, prompty, ustawienia  # noqa: E402
 app.include_router(tekst.router)
 app.include_router(prompty.router)

@@ -8,6 +8,7 @@ zasoby: ./zasoby                  # Twoje pliki: wyniki, wgrane pliki, notatki, 
 baza: ./zasoby/studio.db          # baza zadań i wydatków (SQLite)
 
 uzytkownik: ja                    # jeden użytkownik, bez logowania. Pusty ("") = logowanie po imieniu (praca w grupie)
+# hosty: [moj-komputer.local]     # inne nazwy, pod którymi otwierasz Studio (domyślnie tylko 127.0.0.1 i localhost)
 
 searx_url: ""                     # opcjonalnie: SearXNG do wyszukiwania w sieci w rozmowach (np. http://127.0.0.1:8888)
 

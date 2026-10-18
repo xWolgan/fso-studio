@@ -13,7 +13,9 @@ LOKALNE = {"127.0.0.1", "::1", "localhost"}
 
 
 def _lokalnie(req: Request):
-    if not req.client or req.client.host not in LOKALNE:
+    # zapytanie przekazane przez proxy (Caddy, nginx…) wygląda na lokalne — takie odrzucamy
+    przez_proxy = any(h in req.headers for h in ("x-forwarded-for", "x-real-ip", "forwarded", "x-forwarded-host"))
+    if not req.client or req.client.host not in LOKALNE or przez_proxy:
         raise HTTPException(403, K("e_ustawienia_lokalnie"))
 
 
