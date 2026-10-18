@@ -33,6 +33,10 @@ def _po_zmianie():
 @router.get("/api/ustawienia")
 async def stan(req: Request):
     _lokalnie(req)
+    return {"dostawcy": _dostawcy(), "limit_usd": dostawcy.ustawienia().get("limit_usd_miesiac")}
+
+
+def _dostawcy() -> list:
     out = []
     for d, x in dostawcy.DOSTAWCY.items():
         kat = dostawcy.katalog(d)
@@ -72,6 +76,20 @@ async def katalog(req: Request, dostawca: str, odswiez: int = 0):
         except Exception as e:
             raise HTTPException(502, K("e_katalog", m=str(e)[:200]))
     return {"modele": kat["modele"], "wybrane": dostawcy.wybrane(d)}
+
+
+@router.post("/api/ustawienia/limit")
+async def limit(req: Request):
+    _lokalnie(req)
+    v = (await req.json()).get("usd")
+    try:
+        v = max(0.0, float(v)) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        raise HTTPException(400)
+    u = dostawcy.ustawienia()
+    u["limit_usd_miesiac"] = v
+    dostawcy.zapisz_ustawienia(u)
+    return {"usd": v}
 
 
 @router.post("/api/ustawienia/wybor")

@@ -249,6 +249,20 @@ def spent_all() -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def wydatki(od: float = 0.0) -> dict:
+    """USD od chwili `od`: zadania API (koszt od dostawcy albo szacunek z cennika) + tekst (koszt podany przez API).
+    `bez_ceny` = zadania API, dla których nikt nie podał kosztu (dostawca bez ceny w odpowiedzi)."""
+    with db() as c:
+        z = c.execute("""SELECT COALESCE(SUM(koszt_usd),0), SUM(koszt_usd IS NULL), COUNT(*) FROM jobs
+                         WHERE maszyna LIKE 'api%' AND status IN ('w_toku','gotowe') AND utworzone>=?""", (od,)).fetchone()
+        t = c.execute("SELECT COALESCE(SUM(usd),0), COALESCE(SUM(wejscie+wyjscie),0) FROM llm_uzycie WHERE czas>=?", (od,)).fetchone()
+        modele = c.execute("""SELECT model, COALESCE(SUM(koszt_usd),0) AS usd, COUNT(*) AS zadan FROM jobs
+                              WHERE maszyna LIKE 'api%' AND status IN ('w_toku','gotowe') AND utworzone>=?
+                              GROUP BY model ORDER BY usd DESC LIMIT 8""", (od,)).fetchall()
+    return {"usd": round(z[0] + t[0], 4), "zadania_usd": round(z[0], 4), "zadan": z[2], "bez_ceny": z[1] or 0,
+            "tekst_usd": round(t[0], 4), "tekst_tokeny": t[1], "modele": [dict(r) for r in modele]}
+
+
 def add_llm_usage(login, tryb, wejscie, wyjscie, usd):
     with db() as c:
         c.execute("INSERT INTO llm_uzycie(login,tryb,wejscie,wyjscie,usd,czas) VALUES(?,?,?,?,?,?)",

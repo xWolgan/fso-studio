@@ -314,6 +314,7 @@ class OpenRouter(Higgsfield):
         super().__init__(klucz)
         self.http.headers["Authorization"] = f"Bearer {klucz}"
         self._gotowe: dict[str, str] = {}             # wyniki zapytań synchronicznych (data URI) do odebrania w status()
+        self._koszt: dict[str, float | None] = {}      # koszt podany przez dostawcę (USD)
 
     async def upload(self, path: Path) -> str:
         import base64
@@ -346,6 +347,7 @@ class OpenRouter(Higgsfield):
             d = r.json()
             return {"request_id": d["id"], "status_url": d.get("polling_url") or f"{self.BASE}/videos/{d['id']}", "cancel_url": None}
         if endpoint in ("images", "images/generations"):
+            self._koszt[idem] = ((r.json().get("usage") or {}).get("cost"))
             obraz = (r.json().get("data") or [{}])[0]
             if not obraz.get("b64_json"):
                 raise RuntimeError(K("e_api_brak_pliku"))
@@ -358,13 +360,15 @@ class OpenRouter(Higgsfield):
     async def status(self, status_url: str) -> dict:
         if status_url.startswith("gotowe:"):
             uri = self._gotowe.pop(status_url[7:], None)
-            return {"status": "completed", "plik": uri} if uri else {"status": "failed", "error": "wynik utracony (restart)"}
+            koszt = self._koszt.pop(status_url[7:], None)
+            return {"status": "completed", "plik": uri, "koszt_usd": koszt} if uri else {"status": "failed", "error": "wynik utracony (restart)"}
         d = await super().status(status_url)
         st = d.get("status")
         if st in ("pending", "in_progress"):
             return {"status": "queued" if st == "pending" else "in_progress"}
         if st == "completed":
-            return {"status": "completed", "video": {"url": f"{self.BASE}/videos/{d['id']}/content?index=0"}}
+            return {"status": "completed", "video": {"url": f"{self.BASE}/videos/{d['id']}/content?index=0"},
+                    "koszt_usd": (d.get("usage") or {}).get("cost")}
         return {"status": "failed", "error": d.get("error") or st}
 
     async def cancel(self, cancel_url) -> bool:

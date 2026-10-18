@@ -242,6 +242,11 @@ async def api_submit(req: Request):
             raise HTTPException(400, str(e))
     ile = max(1, min(4, int(d.get("ile", 1) or 1)))
     koszt = api.koszt_s(m, d.get("wartosci", {}) or {}) if m.backend == "api" else 0.0
+    if JEDEN:                                           # jeden użytkownik: zamiast budżetu w sekundach — limit USD na miesiąc
+        koszt = 0.0
+        limit = _limit_usd()
+        if m.backend == "api" and limit and store.wydatki(_poczatek_miesiaca())["usd"] >= limit:
+            raise HTTPException(402, K("e_limit_usd", l=f"{limit:g}"))
     if koszt and store.spent(u) + koszt * ile > api.przydzial(u) + 0.01:
         zostalo = max(0, api.przydzial(u) - store.spent(u))
         raise HTTPException(402, K("e_budzet", k=f"{koszt * ile:g}", z=f"{zostalo:g}"))
@@ -264,8 +269,8 @@ async def api_submit(req: Request):
         w = dict(wartosci)
         for sid in seed_ids:
             w[sid] = (base + i) if base is not None else random.randint(1, seed_max[sid])
-        jid = store.add_job(u, m.obszar, m.id, w, d.get("wejscia", {}), uj, grupa, koszt,
-                            round(api.koszt_usd(m, w), 4) if koszt else None)
+        szac = round(api.koszt_usd(m, w), 4) if m.backend == "api" and m.cena else None   # szacunek z cennika (YAML)
+        jid = store.add_job(u, m.obszar, m.id, w, d.get("wejscia", {}), uj, grupa, koszt, szac)
         if grupa is None and ile > 1:
             grupa = jid
             store.update_job(jid, grupa=jid)
@@ -403,7 +408,29 @@ async def file(req: Request, aid: int, pobierz: int = 0):
 
 # --- API: budżet i wycena ---
 
+def _poczatek_miesiaca() -> float:
+    t = time.localtime()
+    return time.mktime((t.tm_year, t.tm_mon, 1, 0, 0, 0, 0, 0, -1))
+
+
+def _limit_usd() -> float | None:
+    from . import dostawcy
+    try:
+        v = float(dostawcy.ustawienia().get("limit_usd_miesiac") or 0)
+    except (TypeError, ValueError):
+        v = 0
+    return v or None
+
+
 def _budzet(u: str) -> dict:
+    if JEDEN:
+        t = time.localtime()
+        dzis = time.mktime((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0, 0, 0, -1))
+        mies = store.wydatki(_poczatek_miesiaca())
+        for x in mies["modele"]:
+            x["nazwa"] = MODELS[x["model"]].nazwa if x["model"] in MODELS else x["model"]
+        return {"tryb": "usd", "dzis": store.wydatki(dzis)["usd"], "miesiac": mies, "razem": store.wydatki(0)["usd"],
+                "limit": _limit_usd()}
     przydzial, wydane = api.przydzial(u), store.spent(u)
     return {"przydzial": przydzial, "wydane": round(wydane, 1), "zostalo": round(max(0.0, przydzial - wydane), 1)}
 
@@ -426,7 +453,8 @@ async def api_quote(req: Request):
     ile = max(1, min(4, int(d.get("ile", 1) or 1)))
     out = {"budzet": _budzet(u), "prog_s": api.PROG_ZADANIA_S, "api": m.backend == "api"}
     if m.backend == "api":
-        out.update(koszt_s=api.koszt_s(m, w, ile), dostepne=api.dostepny(m) and bool(api.endpoint_dla(m, wej)))
+        out.update(koszt_s=api.koszt_s(m, w, ile), dostepne=api.dostepny(m) and bool(api.endpoint_dla(m, wej)),
+                   koszt_usd=round(api.koszt_usd(m, w, ile), 4) if m.cena else None)
         return out
     out.update(scheduler.eta_lokalnie(u, m, w) or {})        # eta_s (gotowe za), czas_s (samo zadanie), maszyna
     zapasy = []

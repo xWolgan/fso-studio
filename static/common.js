@@ -172,6 +172,23 @@ async function odswiezBudzet() {
   if (!el) return null;
   try {
     const b = await api("/api/budzet");
+    if (b.tryb === "usd") {                             // jeden użytkownik: wydatki w USD (bez budżetu w sekundach)
+      const usd = (x) => (Math.round((x || 0) * 100) / 100).toLocaleString(LOCALE, { minimumFractionDigits: 2 }) + " USD";
+      el.textContent = tf("wydatki_pasek", { u: usd(b.miesiac.usd) });
+      el.classList.toggle("malo", Boolean(b.limit && b.miesiac.usd >= b.limit * 0.85));
+      el.onclick = (e) => {
+        e.preventDefault();
+        modal(T.wydatki_tytul, h("div", { class: "budzet-info" },
+          h("p", {}, T.wydatki_dzis + " ", h("b", {}, usd(b.dzis)), " · " + T.wydatki_miesiac + " ", h("b", {}, usd(b.miesiac.usd)),
+            " · " + T.wydatki_razem + " ", usd(b.razem)),
+          b.limit ? h("p", {}, tf("wydatki_limit", { l: usd(b.limit) })) : null,
+          b.miesiac.modele.length ? h("ul", {}, b.miesiac.modele.map((x) => h("li", {}, `${x.nazwa}: ${usd(x.usd)} (${x.zadan})`))) : null,
+          b.miesiac.tekst_usd ? h("p", {}, tf("wydatki_tekst", { u: usd(b.miesiac.tekst_usd) })) : null,
+          b.miesiac.bez_ceny ? h("p", { class: "hint" }, tf("wydatki_bez_ceny", { n: b.miesiac.bez_ceny })) : null,
+          h("p", { class: "hint" }, T.wydatki_opis)));
+      };
+      return b;
+    }
     el.textContent = tf("budzet_pasek", { s: fmtS(b.zostalo) });
     el.classList.toggle("malo", b.zostalo < b.przydzial * 0.15);
     el.onclick = (e) => {

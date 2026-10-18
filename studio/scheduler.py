@@ -243,6 +243,8 @@ async def run_api(job: dict):
                 store.update_job(jid, status="anulowane", koniec=time.time())
                 return
             raise RuntimeError(K("e_api_nieudane", m=str(d.get("error") or st)[:300]))
+        if isinstance(d.get("koszt_usd"), (int, float)):         # koszt podany przez dostawcę zastępuje szacunek
+            store.update_job(jid, koszt_usd=round(float(d["koszt_usd"]), 4))
         url = api.wynik_url(d)
         if not url:
             raise RuntimeError(K("e_api_brak_pliku"))

@@ -104,10 +104,25 @@ function rysujModele(d, modele, wybrane, lista, liczby) {
   lista.replaceChildren(h("div", { class: "u-filtry" }, szukaj, h("label", { class: "inline" }, tylko, " " + T.u_tylko_wybrane), licznik), grupy);
 }
 
+function sekcjaLimitu(limit) {
+  const pole = h("input", { type: "number", min: "0", step: "1", placeholder: T.u_limit_brak, style: "width:160px" });
+  if (limit) pole.value = limit;
+  const info = h("span", { class: "u-info" });
+  const zapisz = async () => {
+    try { const r = await api("/api/ustawienia/limit", { method: "POST", body: JSON.stringify({ usd: pole.value }) });
+      info.textContent = T.u_zapisano; info.className = "u-info ok"; pole.value = r.usd ?? ""; odswiezBudzet(); }
+    catch (e) { info.textContent = e.message; info.className = "u-info err"; }
+  };
+  pole.addEventListener("keydown", (e) => { if (e.key === "Enter") zapisz(); });
+  return h("section", { class: "u-dostawca" }, h("div", { class: "u-nag" }, h("h2", {}, T.u_limit)),
+    h("p", { class: "u-info", style: "margin:6px 0 0" }, T.u_limit_opis),
+    h("div", { class: "u-klucz" }, pole, h("span", {}, "USD"), h("button", { class: "btn primary", onclick: zapisz }, T.u_zapisz), info));
+}
+
 (async () => {
   const box = document.getElementById("dostawcy");
   try {
-    const ds = await api("/api/ustawienia");
-    box.replaceChildren(...ds.map(sekcja));
+    const st = await api("/api/ustawienia");
+    box.replaceChildren(sekcjaLimitu(st.limit_usd), ...st.dostawcy.map(sekcja));
   } catch (e) { box.replaceChildren(h("p", { class: "u-puste err" }, e.message)); }
 })();

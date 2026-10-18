@@ -316,6 +316,12 @@ function pokazKoszt() {
     const el = $("koszt"); if (!el) return;
     try {
       const w = await api("/api/wycena", { method: "POST", body: JSON.stringify({ model: state.model.id, wartosci: state.values, wejscia: state.inputs, ile: state.ile }) });
+      if (w.budzet.tryb === "usd") {                   // jeden użytkownik: tylko szacunek ceny, jeśli jest
+        el.className = "koszt";
+        el.textContent = (w.koszt_usd ? tf("koszt_usd_linia", { k: (Math.round(w.koszt_usd * 100) / 100).toLocaleString(LOCALE) }) : "")
+          + (w.dostepne ? "" : (w.koszt_usd ? " · " : "") + T.api_niedostepne);
+        return;
+      }
       const brak = w.koszt_s > w.budzet.zostalo;
       el.className = "koszt" + (brak ? " brak" : "");
       el.textContent = tf("koszt_linia", { k: fmtS(w.koszt_s), z: fmtS(w.budzet.zostalo) })
