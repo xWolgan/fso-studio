@@ -134,6 +134,27 @@ def wariant(model: Model, wejscia: dict) -> tuple[Model, dict]:
 MODELS = load_all()
 
 
+def odswiez_chmure():
+    """Modele wybrane w Ustawieniach (dostawcy w chmurze) → pozycje w MODELS; wywoływane na starcie i po każdej zmianie.
+    Na razie: modele tekstowe (rozmowa przez API zgodne z OpenAI u dostawcy)."""
+    from . import dostawcy
+    for k in [k for k, m in MODELS.items() if m.stale.get("chmura")]:
+        del MODELS[k]
+    for i, (d, poz) in enumerate(dostawcy.wybrane_pozycje()):
+        if poz.get("z_repo"):
+            continue                                   # HiggsField / Kie.ai: modele z YAML, już w MODELS
+        if poz["obszar"] != "tekst":
+            continue
+        mid = dostawcy.id_studia(d, poz["id"])
+        nazwa_d = dostawcy.DOSTAWCY[d]["nazwa"]
+        opis = (poz.get("opis") or "").strip()
+        MODELS[mid] = Model(id=mid, nazwa=poz["nazwa"], obszar="tekst", backend="llm", workflow=None, wyjscie="tekst",
+                            opis={"pl": f"{nazwa_d}. {opis}".strip(), "en": f"{nazwa_d}. {opis}".strip()},
+                            licencja={"pl": "API — warunki dostawcy", "en": "API — provider terms"}, kolejnosc=10 + i,
+                            stale={"chmura": True, "dostawca": d, "api_model": poz["id"], "obrazy": bool(poz.get("obraz_we")),
+                                   "narzedzia": bool(poz.get("narzedzia", True)), "temperatura": 0.7})
+
+
 def uruchamialny(m: Model) -> bool:
     """Czy ta instalacja umie uruchomić model: API — jest klucz dostawcy; ComfyUI/usługa — jest maszyna z tą rolą
     (i tą usługą); config.yaml → modele_wylaczone: [id, …] ukrywa wybrane. Bez tego inna instalacja widziałaby
@@ -141,8 +162,8 @@ def uruchamialny(m: Model) -> bool:
     if m.id in (CFG.get("modele_wylaczone") or []):
         return False
     if m.backend == "api":
-        from . import api
-        return api.dostepny(m)
+        from . import api, dostawcy
+        return api.dostepny(m) and m.id in dostawcy.wybrane(m.dostawca or "")   # wybrany w Ustawieniach
     if m.backend in ("comfyui", "http"):
         for x in CFG.get("maszyny") or []:
             if m.obszar not in (x.get("role") or []) or (x.get("modele") is not None and m.id not in x["modele"]):
@@ -151,6 +172,8 @@ def uruchamialny(m: Model) -> bool:
                 continue
             return True
         return False
+    if m.backend == "llm":
+        return bool(m.stale.get("chmura"))          # tekst: tylko modele wybrane w Ustawieniach
     return True
 
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ T.tytul }}{% endblock %}</title>
-<link rel="stylesheet" href="/static/style.css?v=16">
+<link rel="stylesheet" href="/static/style.css?v=17">
 <script>window.T = {{ T_json | safe }}; window.LOGIN = {{ (login or '') | tojson }}; window.LANG = {{ lang | tojson }};</script>
 </head>
 <body data-obszar="{{ obszar or '' }}">
@@ -15,6 +15,7 @@
   <span class="spacer"></span>
   {% if login %}<a class="link" href="#" data-notatki>{{ T.notatki }}</a>{% endif %}
   <a class="link" href="/galeria">{{ T.galeria }}</a>
+  <a class="link" href="/ustawienia">{{ T.ustawienia }}</a>
   <span class="langs">{% for j in jezyki %}{% if j == lang %}<b class="lang on">{{ j }}</b>{% else %}<a class="link lang" href="/jezyk/{{ j }}" title="{{ T['jezyk.' ~ j] }}">{{ j }}</a>{% endif %}{% endfor %}</span>
   {% if login %}<a class="link budzet" href="#" id="budzet"></a>{% endif %}
   {% if not jeden %}<span class="who">{{ login }}</span>

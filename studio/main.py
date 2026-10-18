@@ -19,9 +19,10 @@ from .i18n import JEZYKI, K, L, przetlumacz, t
 from .registry import MODELS, by_area, lokalnie, wariant
 
 app = FastAPI(title="Studio")
-from . import tekst, prompty  # noqa: E402
+from . import tekst, prompty, ustawienia  # noqa: E402
 app.include_router(tekst.router)
 app.include_router(prompty.router)
+app.include_router(ustawienia.router)
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 tpl = Jinja2Templates(directory=ROOT / "templates")
 PORADNIKI = ROOT / "poradniki"
@@ -34,6 +35,8 @@ def aktywne() -> set[str]:
 @app.on_event("startup")
 async def startup():
     store.init()
+    from .registry import odswiez_chmure
+    odswiez_chmure()                              # modele wybrane w Ustawieniach
     asyncio.create_task(scheduler.loop())
 
 
@@ -107,6 +110,12 @@ async def set_lang(req: Request, lg: str):
     r = RedirectResponse(req.headers.get("referer", "/"), status_code=303)
     r.set_cookie("lang", lg if lg in JEZYKI else "pl", max_age=60 * 60 * 24 * 365, samesite="lax")
     return r
+
+
+@app.get("/ustawienia", response_class=HTMLResponse)
+async def settings(req: Request):
+    ustawienia._lokalnie(req)
+    return page(req, "ustawienia.html", obszar="ustawienia")
 
 
 @app.get("/galeria", response_class=HTMLResponse)

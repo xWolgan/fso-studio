@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ T.ustawienia }} · {{ T.tytul }}{% endblock %}
+{% block crumb %}<span class="crumb">{{ T.ustawienia }}</span>{% endblock %}
+{% block body %}
+<main class="ustawienia">
+  <p class="u-wstep">{{ T.u_wstep }}</p>
+  <div id="dostawcy"></div>
+</main>
+{% endblock %}
+{% block scripts %}<script src="/static/ustawienia.js?v=1"></script>{% endblock %}

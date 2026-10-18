@@ -2,8 +2,8 @@
 
 Rozmowy: zasoby/<login>/rozmowy/<id>.json — widzi je tylko autor (żadna galeria ich nie pokazuje).
 Artefakty: zasoby/<login>/artefakty/<nazwa>.md — zwykłe zasoby (rodzaj „tekst”), widoczne w innych obszarach.
-LLM: zgodny z OpenAI. Najpierw API z config.yaml → `llm_api` (OpenRouter, klucz w zmiennej środowiskowej),
-gdy nie odpowiada — modele zapasowe z `llm_api.zapasowe`, a na końcu (opcjonalnie) lokalny LLM (`llm_url`).
+LLM: modele tekstowe wybrane w Ustawieniach (OpenRouter, Claude, ChatGPT, Gemini — endpointy czatu zgodne z OpenAI);
+gdy wybrany nie odpowiada — pozostałe wybrane, a na końcu (opcjonalnie) lokalny LLM (`llm_url`).
 """
 import asyncio
 import json
@@ -232,30 +232,46 @@ def _tytul_biblii(sciezka: str) -> str:
     return re.sub(r"[-_ ]?biblia$", "", Path(sciezka).stem, flags=re.I).replace("-", " ").strip() or "biblia"
 
 
+def _cel_u_dostawcy(d: str, api_model: str, body: dict, obrazy: bool) -> tuple[str, dict, dict]:
+    """Zapytanie w formacie OpenAI do endpointu czatu dostawcy — tylko z parametrami, które dostawca przyjmuje."""
+    from . import dostawcy
+    mysl = bool((body.get("chat_template_kwargs") or {}).get("enable_thinking"))
+    b = {k: v for k, v in body.items() if k != "chat_template_kwargs"}
+    b["model"] = api_model
+    if not obrazy and any(isinstance(x.get("content"), list) for x in body.get("messages", [])):
+        b["messages"] = [{**x, "content": zalaczniki.tylko_tekst(x["content"], S["zal_lokalny"]["pl"])} for x in body["messages"]]
+    if d == "openrouter":
+        b["reasoning"] = {"enabled": mysl}
+        b["usage"] = {"include": True}
+        b["provider"] = {"data_collection": "deny"}          # bez dostawców, którzy zbierają dane z rozmów
+    elif d in ("anthropic", "openai"):
+        b.pop("temperature", None)                           # nowsze modele przyjmują tylko domyślną temperaturę
+    if b.get("stream") and d != "openrouter":
+        b["stream_options"] = {"include_usage": True}
+    return dostawcy.DOSTAWCY[d]["chat"], {"Authorization": f"Bearer {dostawcy.klucz(d)}"}, b
+
+
 def _cele(body: dict) -> list[tuple[str, dict, dict]]:
-    """Dokąd wysłać zapytanie: model wybrany w obszarze Tekst (stale.api_model), potem główny z llm_api, zapasowe,
-    na końcu (opcjonalnie) lokalny LLM.
+    """Dokąd wysłać zapytanie: model wybrany w obszarze Tekst (u jego dostawcy, dwie próby), potem pozostałe modele
+    tekstowe wybrane w Ustawieniach (zapas), na końcu opcjonalnie stare `llm_api` / lokalny LLM z config.yaml.
     Zwraca listę (adres, nagłówki, treść zapytania)."""
+    from . import dostawcy
     cele = []
+    mw = MODELS.get(body.get("model") or "")
+    tekstowe = [m for m in by_area("tekst") if m.stale.get("chmura")]
+    kolejka = ([mw] if mw and mw.stale.get("chmura") else []) + [m for m in tekstowe if m is not mw]
+    for i, m in enumerate(kolejka):
+        d = m.stale["dostawca"]
+        if not dostawcy.klucz(d):
+            continue
+        cel = _cel_u_dostawcy(d, m.stale["api_model"], body, m.stale.get("obrazy", False))
+        cele.append(cel)
+        if i == 0:                                   # pierwszy model drugi raz (chwilowe 429 / pusta odpowiedź)
+            cele.append(cel)
     klucz = os.environ.get(LLM_API.get("klucz_env", ""), "") if LLM_API else ""
-    if klucz:
-        url, nagl = LLM_API["url"].rstrip("/"), {"Authorization": f"Bearer {klucz}"}
-        mw = MODELS.get(body.get("model") or "")
-        wybrany = (mw.stale.get("api_model") if mw else None) or None             # model z listy w obszarze Tekst
-        kolejka = ([wybrany] if wybrany else []) + [LLM_API["model"]] + list(LLM_API.get("zapasowe") or [])
-        for i, model in enumerate(dict.fromkeys(kolejka)):
-            b = {k: v for k, v in body.items() if k != "chat_template_kwargs"}
-            b["model"] = model
-            b["reasoning"] = {"enabled": bool((body.get("chat_template_kwargs") or {}).get("enable_thinking"))
-                              or (model == wybrany and mw.stale.get("myslenie") == "zawsze")}   # np. GLM: nie da się wyłączyć
-            if model == LLM_API["model"] and LLM_API.get("dostawcy"):
-                b["provider"] = {"order": LLM_API["dostawcy"], "allow_fallbacks": False}
-            else:                                    # pozostałe: dowolny dostawca, ale bez zbierania danych z rozmów
-                b["provider"] = {"data_collection": "deny"}
-            b["usage"] = {"include": True}
-            cele.append((url, nagl, b))
-            if i == 0:                               # pierwszy model drugi raz (chwilowe 429 / pusta odpowiedź)
-                cele.append((url, nagl, b))
+    if klucz and LLM_API.get("model"):               # zgodność ze starym config.yaml (llm_api)
+        b = {k: v for k, v in body.items() if k != "chat_template_kwargs"} | {"model": LLM_API["model"]}
+        cele.append((LLM_API["url"].rstrip("/"), {"Authorization": f"Bearer {klucz}"}, b))
     if LLM_URL:                                      # lokalny LLM tylko, gdy jest w config.yaml (llm_url)
         lok = dict(body)
         if any(isinstance(x.get("content"), list) for x in body.get("messages", [])):
@@ -484,6 +500,9 @@ async def wyslij(req: Request, rid: str):
                         if resp.status_code != 200:
                             tresc = (await resp.aread())[:300]
                             await resp_cm.__aexit__(None, None, None)
+                            if resp.status_code == 400 and b"easoning is mandatory" in tresc and (b.get("reasoning") or {}).get("enabled") is False:
+                                b["reasoning"] = {"enabled": True}       # model, który zawsze „myśli” (np. GLM FlashX)
+                                continue
                             if len(cele) > 1:
                                 print(f"LLM {b.get('model')} {resp.status_code}: {tresc!r} — następny cel", flush=True)
                                 cele.pop(0)
@@ -747,7 +766,7 @@ async def prompt_json(req: Request):
     if not opis or not karta or mid not in MODELS:
         raise HTTPException(400, K("e_json_model"))
     tekst_karty = prompty.plik(f"modele/{karta}.md", prompty.jezyk(req)).read_text(encoding="utf-8")
-    czat = MODELS.get("qwen-czat")
+    czat = next(iter(by_area("tekst")), None)
     msgs = [{"role": "system", "content": PROMPT_JSON.format(karta=tekst_karty, proporcje=str(d.get("proporcje") or "16:9"))},
             {"role": "user", "content": opis}]
     async with httpx.AsyncClient(timeout=httpx.Timeout(240, connect=10)) as c:
