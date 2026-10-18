@@ -24,7 +24,8 @@ BUDZET = CFG.get("budzet") or {}
 USD_ZA_SEKUNDE = float(BUDZET.get("usd_za_sekunde", 0.042))     # „sekunda budżetu” = sekunda Kling/WAN 720p
 PROG_ZADANIA_S = float(BUDZET.get("prog_zadania_s", 600))      # zadanie lokalne dłuższe niż to → propozycja API
 CZAS_API_S = 180.0                                              # czas generacji w API, gdy brak historii
-DOSTAWCY = {"higgsfield": {"klucz_env": "HF_KEY", "rownolegle": 10, "nazwa": "HiggsField"}}
+DOSTAWCY = {"higgsfield": {"klucz_env": "HF_KEY", "rownolegle": 10, "nazwa": "HiggsField"},
+            "fal": {"klucz_env": "FAL_KEY", "rownolegle": 10, "nazwa": "fal.ai"}}
 DOSTAWCY.update(CFG.get("api") or {})
 
 TYPY_PLIKOW = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif",
@@ -225,6 +226,80 @@ class Higgsfield:
                     f.write(chunk)
 
 
+# --- fal.ai ---
+
+class Fal(Higgsfield):
+    """fal.ai — kolejka (queue.fal.run): submit → status → wynik. Interfejs jak Higgsfield (status znormalizowany:
+    queued | in_progress | completed | failed; przy completed dołączony wynik). Pliki wejściowe: przez magazyn fal.ai
+    (initiate → PUT), a gdy się nie uda — jako data URI."""
+    BASE = "https://queue.fal.run"
+
+    async def upload(self, path: Path) -> str:
+        typ = TYPY_PLIKOW.get(path.suffix.lower())
+        if not typ:
+            raise ValueError(K("e_api_typ", t=path.suffix, n=path.name))
+        try:
+            r = await self.http.post("https://rest.alpha.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3",
+                                     json={"content_type": typ, "file_name": path.name})
+            if r.status_code == 200:
+                d = r.json()
+                r2 = await self.pliki.put(d["upload_url"], content=path.read_bytes(), headers={"Content-Type": typ})
+                if r2.status_code < 300:
+                    return d["file_url"]
+        except httpx.HTTPError:
+            pass
+        import base64
+        return f"data:{typ};base64," + base64.b64encode(path.read_bytes()).decode()
+
+    async def submit(self, endpoint: str, args: dict, idem: str) -> dict:
+        r = await self.http.post("/" + endpoint, json=args)
+        if r.status_code >= 300:
+            if r.status_code in (401, 403):
+                raise RuntimeError(K("e_api_dostep"))
+            if r.status_code == 402:
+                raise RuntimeError(K("e_api_srodki"))
+            raise RuntimeError(K("e_api_odrzucilo", m=f"{r.status_code}: {self._blad(r)}"))
+        d = r.json()
+        return {"request_id": d.get("request_id"), "status_url": d.get("status_url"), "cancel_url": d.get("cancel_url"),
+                "response_url": d.get("response_url")}
+
+    async def status(self, status_url: str) -> dict:
+        d = None
+        for proba in range(5):                       # fal odpowiada 200 albo 202 (w kolejce / w toku)
+            try:
+                r = await self.http.get(status_url)
+                if r.status_code in (200, 202):
+                    d = r.json()
+                    break
+                if r.status_code in (401, 404):
+                    raise RuntimeError(K("e_api_stan"))
+            except httpx.HTTPError:
+                pass
+            await asyncio.sleep(3 * (proba + 1))
+        if d is None:
+            raise RuntimeError(K("e_api_stan"))
+        st = d.get("status")
+        if st == "IN_QUEUE":
+            return {"status": "queued"}
+        if st == "IN_PROGRESS":
+            return {"status": "in_progress"}
+        if st == "COMPLETED":
+            if d.get("error"):
+                return {"status": "failed", "error": d.get("error")}
+            wynik = await self.http.get(d.get("response_url") or status_url.rsplit("/status", 1)[0])
+            if wynik.status_code != 200:
+                return {"status": "failed", "error": self._blad(wynik)}
+            return {"status": "completed", **wynik.json()}
+        return {"status": "failed", "error": d.get("error") or st}
+
+    async def cancel(self, cancel_url: str) -> bool:
+        try:
+            r = await self.http.put(cancel_url)
+            return r.status_code < 300
+        except httpx.HTTPError:
+            return False
+
+
 _KLIENCI: dict[str, Higgsfield] = {}
 
 
@@ -234,14 +309,16 @@ def klient(dostawca: str) -> Higgsfield:
         klucz = os.environ.get((d or {}).get("klucz_env", ""), "")
         if not klucz:
             raise RuntimeError(f"brak klucza API dostawcy {dostawca}")
-        _KLIENCI[dostawca] = Higgsfield(klucz)
+        _KLIENCI[dostawca] = (Fal if dostawca == "fal" else Higgsfield)(klucz)
     return _KLIENCI[dostawca]
 
 
 def wynik_url(d: dict) -> str | None:
-    for k in ("video", "audio"):
+    for k in ("video", "audio", "image", "audio_file", "audio_url"):
         if isinstance(d.get(k), dict) and d[k].get("url"):
             return d[k]["url"]
+        if isinstance(d.get(k), str) and d[k].startswith("http"):
+            return d[k]
     for k in ("videos", "images", "audios"):
         if d.get(k):
             return d[k][0].get("url")
@@ -253,7 +330,7 @@ async def przygotuj(hf: Higgsfield, model, values: dict, wejscia: dict, plik_zas
     e = endpoint_dla(model, wejscia)
     if not e:
         raise ValueError(K("e_api_tryb"))
-    args = dict(model.stale or {})
+    args = {k: v for k, v in (model.stale or {}).items() if k not in ("chmura", "api_model", "dostawca")}
     used = apply_params(model, values, lambda t, v: args.__setitem__(t, v))
     fmt = {}
     for p in model.parametry:

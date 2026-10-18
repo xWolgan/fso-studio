@@ -186,7 +186,7 @@ async def _fal(c) -> list:
             if ob == "sfx" and ("music" in tagi or "song" in tagi):
                 ob = "muzyka"
             out.append(_poz(m["endpoint_id"], md.get("display_name") or m["endpoint_id"], ob, md.get("description"),
-                            obraz_we=kat.startswith("image"), kategoria=kat))
+                            obraz_we=kat.startswith("image"), obslugiwany=True, kategoria=kat))
         kursor = j.get("next_cursor")
         if not j.get("has_more") or not kursor:
             break
@@ -283,9 +283,12 @@ def katalog(d: str) -> dict | None:
     if d in ("higgsfield", "kie"):            # opisy z repo — zawsze aktualne
         return {"czas": time.time(), "modele": _z_repo(d)}
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        kat = json.loads(p.read_text(encoding="utf-8"))
     except Exception:
         return None
+    for m in kat.get("modele", []):                   # obsługa zależy od wersji Studia, nie od chwili pobrania katalogu
+        m["obslugiwany"] = m["obszar"] == "tekst" if d in ("openrouter", "anthropic", "openai", "gemini") else True
+    return kat
 
 
 # --- wybór użytkownika ---
@@ -335,3 +338,106 @@ def wybrane_pozycje() -> list[tuple[str, dict]]:
 def id_studia(d: str, model_id: str) -> str:
     """Id modelu w Studiu (bezpieczne w adresach i nazwach plików)."""
     return f"{d}--" + re.sub(r"[^0-9a-z._-]+", "-", model_id.lower()).strip("-")[:80]
+
+
+# --- fal.ai: opis parametrów (OpenAPI) → pola formularza Studia ---
+
+SCHEMATY = KATALOGI / "schematy"
+WEJSCIA_PLIKOW = (("image", "obraz"), ("video", "wideo"), ("audio", "dzwiek"))
+POMIJANE = {"sync_mode", "enable_safety_checker", "safety_tolerance", "output_format", "webhook_url", "num_images"}
+
+
+def _rozwin(schemat: dict, sch: dict) -> dict:
+    """$ref / allOf / anyOf z jednym typem → zwykły opis pola."""
+    if "$ref" in sch:
+        return _rozwin(schemat, schemat["components"]["schemas"][sch["$ref"].split("/")[-1]])
+    for k in ("allOf", "anyOf", "oneOf"):
+        if k in sch:
+            czesci = [_rozwin(schemat, x) for x in sch[k]]
+            enumy = [x for x in czesci if x.get("enum")]
+            proste = [x for x in czesci if x.get("type") not in (None, "null", "object")]
+            baza = {kk: vv for kk, vv in sch.items() if kk != k}
+            return {**(enumy[0] if enumy else proste[0] if proste else {}), **baza}
+    return sch
+
+
+def pola_z_openapi(schemat: dict, endpoint_id: str) -> tuple[list, list]:
+    """(parametry, wejścia) z OpenAPI fal.ai dla endpointu."""
+    sciezka = next((v for k, v in schemat.get("paths", {}).items() if k.rstrip("/").endswith(endpoint_id)
+                    and "post" in v), None) or next(v for v in schemat.get("paths", {}).values() if "post" in v)
+    wej = _rozwin(schemat, sciezka["post"]["requestBody"]["content"]["application/json"]["schema"])
+    wymagane = set(wej.get("required") or [])
+    kolejnosc = wej.get("x-fal-order-properties") or list(wej.get("properties", {}))
+    parametry, wejscia = [], []
+    for nazwa in kolejnosc:
+        if nazwa not in wej.get("properties", {}) or nazwa in POMIJANE:
+            continue
+        p = _rozwin(schemat, wej["properties"][nazwa])
+        typ, dom, tytul = p.get("type"), p.get("default"), p.get("title") or nazwa.replace("_", " ")
+        opis = (p.get("description") or "")[:300]
+        wym = nazwa in wymagane
+        plik = next((r for slowo, r in WEJSCIA_PLIKOW if slowo in nazwa and (nazwa.endswith("_url") or nazwa.endswith("_urls"))), None)
+        if plik:
+            wiele = typ == "array" or nazwa.endswith("_urls")
+            wejscia.append({"id": nazwa, "typ": plik, "cel": nazwa, "etykieta": {"pl": tytul, "en": tytul},
+                            "wiele": int(p.get("maxItems") or 4) if wiele else None, "wymagane": wym, "opis": opis})
+            continue
+        baza = {"id": nazwa, "etykieta": {"pl": tytul, "en": tytul}, "pomoc": opis, "cel": [nazwa], "pomin_puste": not wym}
+        if nazwa == "prompt" or (nazwa in ("text", "input", "lyrics") and not any(x["typ"] == "prompt" for x in parametry)
+                                 and "prompt" not in wej.get("properties", {})):
+            parametry.append({**baza, "id": "prompt", "typ": "prompt", "wymagane": wym, "opcjonalny": not wym})   # Studio: prompt = „prompt”
+        elif nazwa == "seed":
+            parametry.append({**baza, "typ": "seed", "max": 2**31 - 1})
+        elif p.get("enum"):
+            opcje = [str(x) for x in p["enum"]]
+            zast = next((x for x in ("auto", "none", "default") if x in opcje), opcje[0])
+            parametry.append({**baza, "typ": "wybor", "opcje": opcje, "domyslnie": str(dom) if dom is not None else zast,
+                              "wartosc_typ": "int" if typ == "integer" else "float" if typ == "number" else None})
+        elif typ == "boolean":
+            parametry.append({**baza, "typ": "przelacznik", "domyslnie": bool(dom)})
+        elif typ in ("integer", "number") and p.get("minimum") is not None and p.get("maximum") is not None:
+            parametry.append({**baza, "typ": "liczba" if typ == "integer" else "ulamek", "min": p["minimum"], "max": p["maximum"],
+                              "domyslnie": dom if dom is not None else p["minimum"],
+                              **({"krok": (p["maximum"] - p["minimum"]) / 100} if typ == "number" else {})})
+        elif typ in ("integer", "number", "string"):
+            parametry.append({**baza, "typ": "tekst", "domyslnie": "" if dom is None else str(dom), "wymagane": wym,
+                              "wartosc_typ": {"integer": "int", "number": "float"}.get(typ)})
+        # obiekty i listy złożone (np. LoRA) — pomijane
+    parametry.sort(key=lambda x: 0 if x["typ"] == "prompt" else 2 if x["typ"] == "seed" else 1)   # prompt na górze, seed na dole
+    return parametry, wejscia
+
+
+def _plik_schematu(d: str, model_id: str) -> Path:
+    return SCHEMATY / (id_studia(d, model_id) + ".json")
+
+
+async def pobierz_schemat(d: str, model_id: str) -> dict:
+    """fal.ai: OpenAPI endpointu + cena → zapis obok katalogu. Zwraca {parametry, wejscia, cena}."""
+    async with httpx.AsyncClient(timeout=TIMEOUT) as c:
+        h = naglowki("fal") if klucz("fal") else {}
+        r = await c.get("https://api.fal.ai/v1/models", params={"endpoint_id": model_id, "expand": "openapi-3.0"}, headers=h)
+        r.raise_for_status()
+        m = (r.json().get("models") or [None])[0]
+        if not m or not m.get("openapi"):
+            raise RuntimeError("brak opisu parametrów")
+        parametry, wejscia = pola_z_openapi(m["openapi"], model_id)
+        cena = ""
+        try:
+            rc = await c.get("https://api.fal.ai/v1/models/pricing", params={"endpoint_id": model_id}, headers=h)
+            if rc.status_code == 200:
+                pr = (rc.json().get("prices") or [None])[0]
+                if pr:
+                    cena = f"{pr.get('unit_price')} {pr.get('currency', 'USD')} / {pr.get('unit')}"
+        except httpx.HTTPError:
+            pass
+    out = {"parametry": parametry, "wejscia": wejscia, "cena": cena, "kategoria": (m.get("metadata") or {}).get("category")}
+    SCHEMATY.mkdir(parents=True, exist_ok=True)
+    _plik_schematu(d, model_id).write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+    return out
+
+
+def schemat(d: str, model_id: str) -> dict | None:
+    try:
+        return json.loads(_plik_schematu(d, model_id).read_text(encoding="utf-8"))
+    except Exception:
+        return None

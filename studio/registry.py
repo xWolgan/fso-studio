@@ -143,9 +143,21 @@ def odswiez_chmure():
     for i, (d, poz) in enumerate(dostawcy.wybrane_pozycje()):
         if poz.get("z_repo"):
             continue                                   # HiggsField / Kie.ai: modele z YAML, już w MODELS
+        mid = dostawcy.id_studia(d, poz["id"])
+        if d == "fal":
+            sch = dostawcy.schemat(d, poz["id"])
+            if not sch:
+                continue
+            opis = (poz.get("opis") or "").strip()
+            MODELS[mid] = Model(id=mid, nazwa=poz["nazwa"], obszar=poz["obszar"], backend="api", workflow=None,
+                                wyjscie=poz["obszar"], opis={"pl": opis, "en": opis},
+                                licencja={"pl": "API fal.ai — warunki modelu", "en": "fal.ai API — model terms"},
+                                uwagi={"pl": sch.get("cena") or "", "en": sch.get("cena") or ""} if sch.get("cena") else {},
+                                wejscia=sch["wejscia"], parametry=sch["parametry"], kolejnosc=50 + i, dostawca="fal",
+                                endpointy=[{"endpoint": poz["id"]}], stale={"chmura": True, "api_model": poz["id"]})
+            continue
         if poz["obszar"] != "tekst":
             continue
-        mid = dostawcy.id_studia(d, poz["id"])
         nazwa_d = dostawcy.DOSTAWCY[d]["nazwa"]
         opis = (poz.get("opis") or "").strip()
         MODELS[mid] = Model(id=mid, nazwa=poz["nazwa"], obszar="tekst", backend="llm", workflow=None, wyjscie="tekst",
@@ -163,7 +175,7 @@ def uruchamialny(m: Model) -> bool:
         return False
     if m.backend == "api":
         from . import api, dostawcy
-        return api.dostepny(m) and m.id in dostawcy.wybrane(m.dostawca or "")   # wybrany w Ustawieniach
+        return api.dostepny(m) and (m.stale.get("chmura") or m.id in dostawcy.wybrane(m.dostawca or ""))   # wybrany w Ustawieniach
     if m.backend in ("comfyui", "http"):
         for x in CFG.get("maszyny") or []:
             if m.obszar not in (x.get("role") or []) or (x.get("modele") is not None and m.id not in x["modele"]):

@@ -79,6 +79,12 @@ async def wybor(req: Request):
     _lokalnie(req)
     j = await req.json()
     d = _d(j.get("dostawca") or "")
-    dostawcy.ustaw_wybor(d, str(j.get("id") or ""), bool(j.get("tak")))
+    mid = str(j.get("id") or "")
+    if d == "fal" and j.get("tak") and not dostawcy.schemat(d, mid):
+        try:
+            await dostawcy.pobierz_schemat(d, mid)          # parametry modelu → formularz w obszarze
+        except Exception as e:
+            raise HTTPException(502, K("e_katalog", m=str(e)[:200]))
+    dostawcy.ustaw_wybor(d, mid, bool(j.get("tak")))
     _po_zmianie()
     return {"wybrane": dostawcy.wybrane(d)}

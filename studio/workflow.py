@@ -191,6 +191,14 @@ def apply_params(model: Model, values: dict, put) -> dict:
         elif typ in ("prompt", "tekst", "wybor", "przelacznik", "cechy"):
             if p.get("wymagane") and not str(v or "").strip():
                 raise ValueError(K("e_puste", n=pid))
+            if p.get("pomin_puste") and (v is None or str(v).strip() == ""):
+                used[pid] = v
+                continue                                   # pole opcjonalne API: nie wysyłamy pustego
+            if p.get("wartosc_typ") and typ in ("tekst", "wybor"):
+                try:
+                    v = int(float(v)) if p["wartosc_typ"] == "int" else float(v)
+                except (TypeError, ValueError):
+                    raise ValueError(K("e_puste", n=pid))
             if typ == "przelacznik":
                 v = bool(v) if not isinstance(v, str) else v.lower() in ("1", "true", "tak", "on")
             for t in p["cel"]:
