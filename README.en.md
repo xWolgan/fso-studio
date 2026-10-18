@@ -29,7 +29,22 @@ the areas. You can change the selection at any time.
 One key is enough to start — e.g. **OpenRouter** gives you text, image, video and speech. Models marked “support coming
 soon” in Settings are visible but not yet available (e.g. Lyria music, Gemini video and speech).
 
-## Quick start
+## One-command install
+
+**Windows** — open PowerShell (Start menu → type “PowerShell”) and paste:
+```powershell
+irm https://raw.githubusercontent.com/xWolgan/fso-studio/main/install.ps1 | iex
+```
+**macOS / Linux** — open Terminal and paste:
+```bash
+curl -fsSL https://raw.githubusercontent.com/xWolgan/fso-studio/main/install.sh | bash
+```
+The installer downloads the Studio into a `Studio` folder in your home directory, installs Python on Windows if needed,
+puts a **Studio** shortcut on the desktop (macOS: `Studio.command`), starts the Studio and opens the browser on
+Settings. Next time just double-click the shortcut. Running the installer again = update (keys, settings and your files
+stay). On macOS you need Python 3.11+ (https://www.python.org/downloads/).
+
+## Quick start (manual)
 
 You need **Python 3.11+** and a browser.
 

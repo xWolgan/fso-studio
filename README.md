@@ -29,7 +29,22 @@ w obszarach. Wybór możesz zmieniać w każdej chwili.
 Na start wystarczy jeden klucz — np. **OpenRouter** daje tekst, obraz, wideo i mowę. Modele oznaczone w Ustawieniach
 „obsługa wkrótce” są widoczne, ale jeszcze niedostępne (m.in. muzyka Lyria, wideo i mowa Gemini).
 
-## Szybki start
+## Instalacja jednym poleceniem
+
+**Windows** — otwórz PowerShell (menu Start → wpisz „PowerShell”) i wklej:
+```powershell
+irm https://raw.githubusercontent.com/xWolgan/fso-studio/main/install.ps1 | iex
+```
+**macOS / Linux** — otwórz Terminal i wklej:
+```bash
+curl -fsSL https://raw.githubusercontent.com/xWolgan/fso-studio/main/install.sh | bash
+```
+Instalator pobiera Studio do folderu `Studio` w Twoim katalogu domowym, na Windowsie w razie potrzeby instaluje
+Pythona, tworzy na pulpicie skrót **Studio** (macOS: `Studio.command`), uruchamia Studio i otwiera przeglądarkę na
+Ustawieniach. Następnym razem wystarczy dwuklik na skrót. Ponowne uruchomienie instalatora = aktualizacja
+(klucze, ustawienia i Twoje pliki zostają). Na macOS potrzebny jest Python 3.11+ (https://www.python.org/downloads/).
+
+## Szybki start (ręcznie)
 
 Potrzebujesz **Pythona 3.11+** i przeglądarki.
 
