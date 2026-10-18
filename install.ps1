@@ -1,4 +1,4 @@
-﻿# Instalator Studia (Windows). Uruchom w PowerShellu:
+# Instalator Studia (Windows). Uruchom w PowerShellu:
 #   irm https://raw.githubusercontent.com/xWolgan/fso-studio/main/install.ps1 | iex
 # Pobiera Studio do %USERPROFILE%\Studio (ponowne uruchomienie = aktualizacja; klucze, ustawienia i Twoje pliki zostają),
 # w razie potrzeby instaluje Pythona (winget), tworzy skrót „Studio” na pulpicie i uruchamia Studio.
