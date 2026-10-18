@@ -1,4 +1,4 @@
-# Uruchamia Studio (Windows): http://127.0.0.1:8100   — albo dwuklik na start.cmd
+﻿# Uruchamia Studio (Windows): http://127.0.0.1:8100   — albo dwuklik na start.cmd
 # Pierwsze uruchomienie tworzy config.yaml i sekrety.env z przykładów oraz środowisko .venv z zależnościami.
 # Dostęp z innych komputerów w sieci: $env:HOST = "0.0.0.0"; .\start.ps1  (Studio nie ma haseł — tylko w zaufanej sieci!)
 $ErrorActionPreference = "Stop"

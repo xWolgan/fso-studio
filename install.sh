@@ -8,6 +8,12 @@ REPO="xWolgan/fso-studio"
 CEL="${STUDIO_DIR:-$HOME/Studio}"
 
 echo; echo "== Studio: instalacja do $CEL =="; echo
+# folder istnieje, nie jest pusty i nie ma w nim Studia → nie ruszamy cudzych plików
+if [ -d "$CEL" ] && [ -n "$(ls -A "$CEL" 2>/dev/null)" ] && [ ! -f "$CEL/studio/main.py" ]; then
+  echo "Folder $CEL już istnieje i zawiera inne pliki — nie nadpisuję go."
+  echo "Wybierz inny folder, np.:  curl -fsSL https://raw.githubusercontent.com/xWolgan/fso-studio/main/install.sh | STUDIO_DIR=\"\$HOME/Studio-AI\" bash"
+  exit 1
+fi
 if ! python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)" 2>/dev/null; then
   echo "Potrzebny Python 3.11 lub nowszy."
   if [ "$(uname)" = "Darwin" ]; then
@@ -37,4 +43,5 @@ if [ "$(uname)" = "Darwin" ] && [ -d "$HOME/Desktop" ] && [ -z "${STUDIO_BEZ_SKR
 fi
 echo "Gotowe. Następnym razem uruchomisz Studio poleceniem:  $CEL/start.sh"
 echo "Przeglądarka otworzy się sama na http://127.0.0.1:8100/ustawienia — wpisz tam klucze API."; echo
+[ -n "${STUDIO_BEZ_STARTU:-}" ] && { echo "Zainstalowano (bez uruchamiania)."; exit 0; }
 exec "$CEL/start.sh"

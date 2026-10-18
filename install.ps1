@@ -1,4 +1,4 @@
-# Instalator Studia (Windows). Uruchom w PowerShellu:
+﻿# Instalator Studia (Windows). Uruchom w PowerShellu:
 #   irm https://raw.githubusercontent.com/xWolgan/fso-studio/main/install.ps1 | iex
 # Pobiera Studio do %USERPROFILE%\Studio (ponowne uruchomienie = aktualizacja; klucze, ustawienia i Twoje pliki zostają),
 # w razie potrzeby instaluje Pythona (winget), tworzy skrót „Studio” na pulpicie i uruchamia Studio.
@@ -15,6 +15,12 @@ function Python-OK {
 }
 
 Write-Host "`n== Studio: instalacja do $Cel ==`n"
+# folder istnieje, nie jest pusty i nie ma w nim Studia → nie ruszamy cudzych plików
+if ((Test-Path $Cel) -and (Get-ChildItem $Cel -Force | Select-Object -First 1) -and -not (Test-Path (Join-Path $Cel "studio\main.py"))) {
+    Write-Host "Folder $Cel już istnieje i zawiera inne pliki — nie nadpisuję go." -ForegroundColor Yellow
+    Write-Host 'Wybierz inny folder, np.:  $env:STUDIO_DIR = "$HOME\Studio-AI"; irm https://raw.githubusercontent.com/xWolgan/fso-studio/main/install.ps1 | iex'
+    return
+}
 if (-not (Python-OK)) {
     Write-Host "Brak Pythona 3.11+ — instaluję Python 3.12 (winget, tylko dla tego użytkownika)…"
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
@@ -49,6 +55,7 @@ if (-not $env:STUDIO_BEZ_SKROTU) {
     Write-Host "Skrót 'Studio' jest na pulpicie. Następnym razem wystarczy dwuklik.`n"
 }
 
+if ($env:STUDIO_BEZ_STARTU) { Write-Host "Zainstalowano (bez uruchamiania)."; return }
 Start-Process (Join-Path $Cel "start.cmd") -WorkingDirectory $Cel
 Write-Host "Studio startuje w osobnym oknie (pierwszy raz instaluje zależności — chwilę to trwa)."
 Write-Host "Przeglądarka otworzy się sama na http://127.0.0.1:8100/ustawienia — wpisz tam klucze API."
