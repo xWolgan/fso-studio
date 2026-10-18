@@ -9,7 +9,7 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 
-from .config import BAZA, ZASOBY
+from .config import BAZA, CFG, ZASOBY
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -110,6 +110,17 @@ def user_dir(login: str, *parts) -> Path:
 
 def konto_istnieje(login: str) -> bool:
     return (ZASOBY / login).is_dir()
+
+
+def kto(cookie_login: str | None) -> str | None:
+    """Zalogowany użytkownik: w trybie jednego użytkownika (config `uzytkownik`) zawsze on, bez logowania;
+    inaczej login z ciasteczka, jeśli konto istnieje."""
+    jeden = norm_login(str(CFG.get("uzytkownik") or ""))
+    if jeden:
+        user_dir(jeden)
+        return jeden
+    u = norm_login(cookie_login or "")
+    return u if u and konto_istnieje(u) else None
 
 
 def nowe_konta() -> dict[str, float]:

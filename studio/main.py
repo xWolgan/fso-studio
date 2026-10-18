@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import api, scheduler, store
-from .config import OBSZARY, ROOT, ZASOBY
+from .config import CFG, OBSZARY, ROOT, ZASOBY
 from .i18n import JEZYKI, K, L, przetlumacz, t
 from .registry import MODELS, by_area, lokalnie, wariant
 
@@ -37,9 +37,11 @@ async def startup():
     asyncio.create_task(scheduler.loop())
 
 
+JEDEN = store.norm_login(str(CFG.get("uzytkownik") or ""))   # tryb jednego użytkownika: bez logowania
+
+
 def who(req: Request) -> str | None:
-    u = store.norm_login(req.cookies.get("login", ""))
-    return u if u and store.konto_istnieje(u) else None
+    return store.kto(req.cookies.get("login"))
 
 
 def lang(req: Request) -> str:
@@ -61,7 +63,7 @@ def page(req: Request, name: str, **ctx):
     lg = lang(req)
     return tpl.TemplateResponse(req, name, {"login": who(req), "lang": lg, "T": t(lg), "jezyki": JEZYKI,
                                             "T_json": json.dumps(teksty(lg), ensure_ascii=False),
-                                            "obszary": OBSZARY, "aktywne": aktywne(), **ctx})
+                                            "obszary": OBSZARY, "aktywne": aktywne(), "jeden": bool(JEDEN), **ctx})
 
 
 def need(req: Request) -> str:

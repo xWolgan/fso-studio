@@ -17,8 +17,8 @@
   <a class="link" href="/galeria">{{ T.galeria }}</a>
   <span class="langs">{% for j in jezyki %}{% if j == lang %}<b class="lang on">{{ j }}</b>{% else %}<a class="link lang" href="/jezyk/{{ j }}" title="{{ T['jezyk.' ~ j] }}">{{ j }}</a>{% endif %}{% endfor %}</span>
   {% if login %}<a class="link budzet" href="#" id="budzet"></a>{% endif %}
-  <span class="who">{{ login }}</span>
-  <a class="link" href="/wyloguj">{{ T.wyloguj }}</a>
+  {% if not jeden %}<span class="who">{{ login }}</span>
+  <a class="link" href="/wyloguj">{{ T.wyloguj }}</a>{% endif %}
 </header>
 {% endblock %}
 {% block body %}{% endblock %}

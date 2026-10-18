@@ -7,12 +7,10 @@ ROOT = Path(__file__).resolve().parent.parent          # katalog gui/
 CONFIG_FILE = Path(os.environ.get("STUDIO_CONFIG", ROOT / "config.yaml"))
 
 _DEFAULT = {
-    "zasoby": str(Path.home() / "fso-zasoby"),
-    "baza": str(Path.home() / "fso-zasoby" / "studio.db"),
-    "maszyny": [
-        {"id": "spark-1", "comfyui": "http://127.0.0.1:8188",
-         "role": ["obraz", "wideo", "muzyka", "sfx", "mowa"]},
-    ],
+    "zasoby": str(ROOT / "zasoby"),
+    "baza": str(ROOT / "zasoby" / "studio.db"),
+    "maszyny": [],
+    "uzytkownik": "ja",     # jeden użytkownik, bez logowania; pusty = logowanie po imieniu (praca w grupie)
 }
 
 

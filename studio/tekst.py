@@ -30,8 +30,8 @@ HISTORIA_ZNAKOW = 60000           # ile ostatnich znaków rozmowy idzie do model
 
 
 def _need(req: Request) -> str:
-    u = store.norm_login(req.cookies.get("login", ""))
-    if not u or not store.konto_istnieje(u):
+    u = store.kto(req.cookies.get("login"))
+    if not u:
         raise HTTPException(401, K("e_zaloguj"))
     return u
 
