@@ -9,6 +9,7 @@ GET status_url → status queued | in_progress | completed | failed | nsfw | can
 Pliki wejściowe: POST /files/generate-upload-url → PUT na upload_url → public_url. Klucz: zmienna HF_KEY („id:sekret”).
 """
 import asyncio
+import json
 import os
 import random
 from pathlib import Path
@@ -28,7 +29,8 @@ DOSTAWCY = {"higgsfield": {"klucz_env": "HF_KEY", "rownolegle": 10, "nazwa": "Hi
             "fal": {"klucz_env": "FAL_KEY", "rownolegle": 10, "nazwa": "fal.ai"},
             "openrouter": {"klucz_env": "OPENROUTER_API_KEY", "rownolegle": 6, "nazwa": "OpenRouter"},
             "openai": {"klucz_env": "OPENAI_API_KEY", "rownolegle": 4, "nazwa": "OpenAI"},
-            "gemini": {"klucz_env": "GEMINI_API_KEY", "rownolegle": 4, "nazwa": "Google Gemini"}}
+            "gemini": {"klucz_env": "GEMINI_API_KEY", "rownolegle": 4, "nazwa": "Google Gemini"},
+            "kie": {"klucz_env": "KIE_API_KEY", "rownolegle": 10, "nazwa": "Kie.ai"}}
 DOSTAWCY.update(CFG.get("api") or {})
 
 TYPY_PLIKOW = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif",
@@ -387,6 +389,66 @@ class OpenRouter(Higgsfield):
                     f.write(chunk)
 
 
+# --- Kie.ai: createTask → recordInfo; pliki przez file-base64-upload (kasowane po 24 h) ---
+
+class Kie(Higgsfield):
+    BASE = "https://api.kie.ai"
+    PLIKI = "https://kieai.redpandaai.co/api/file-base64-upload"
+
+    def __init__(self, klucz: str):
+        super().__init__(klucz)
+        self.http.headers["Authorization"] = f"Bearer {klucz}"
+
+    @staticmethod
+    def _sprawdz(j: dict, blad_klucz: str) -> dict:
+        """Kie.ai zwraca HTTP 200 także przy błędach — liczy się `code` w treści."""
+        code = j.get("code")
+        if code in (401, 403):
+            raise RuntimeError(K("e_api_dostep"))
+        if code == 402:
+            raise RuntimeError(K("e_api_srodki"))
+        if code != 200:
+            raise RuntimeError(K(blad_klucz, m=f"{code}: {str(j.get('msg') or j)[:300]}"))
+        return j.get("data") or {}
+
+    async def upload(self, path: Path) -> str:
+        import base64
+        typ = TYPY_PLIKOW.get(path.suffix.lower())
+        if not typ:
+            raise ValueError(K("e_api_typ", t=path.suffix, n=path.name))
+        r = await self.http.post(self.PLIKI, json={"base64Data": f"data:{typ};base64," + base64.b64encode(path.read_bytes()).decode(),
+                                                   "uploadPath": "studio", "fileName": path.name})
+        d = self._sprawdz(r.json(), "e_api_wysylka")
+        return d.get("downloadUrl") or d.get("fileUrl")
+
+    async def submit(self, endpoint: str, args: dict, idem: str) -> dict:
+        r = await self.http.post("/api/v1/jobs/createTask", json={"model": endpoint, "input": args})
+        if r.status_code >= 300:
+            raise RuntimeError(K("e_api_odrzucilo", m=f"{r.status_code}: {self._blad(r)}"))
+        d = self._sprawdz(r.json(), "e_api_odrzucilo")
+        tid = d["taskId"]
+        return {"request_id": tid, "status_url": f"{self.BASE}/api/v1/jobs/recordInfo?taskId={tid}", "cancel_url": None}
+
+    async def status(self, status_url: str) -> dict:
+        d = await super().status(status_url)
+        dane = self._sprawdz(d, "e_api_nieudane")
+        st = dane.get("state")
+        if st in ("waiting", "queuing"):
+            return {"status": "queued"}
+        if st == "generating":
+            return {"status": "in_progress"}
+        if st == "success":
+            try:
+                urls = (json.loads(dane.get("resultJson") or "{}").get("resultUrls")) or []
+            except ValueError:
+                urls = []
+            return {"status": "completed", "wynik_url": urls[0] if urls else None}
+        return {"status": "failed", "error": dane.get("failMsg") or st}
+
+    async def cancel(self, cancel_url) -> bool:
+        return False
+
+
 _KLIENCI: dict[str, Higgsfield] = {}
 
 
@@ -401,7 +463,7 @@ def klient(dostawca: str) -> Higgsfield:
         elif dostawca == "gemini":                     # obraz przez endpoint zgodny z OpenAI
             _KLIENCI[dostawca] = OpenRouter(klucz, "https://generativelanguage.googleapis.com/v1beta/openai")
         else:
-            _KLIENCI[dostawca] = {"fal": Fal, "openrouter": OpenRouter}.get(dostawca, Higgsfield)(klucz)
+            _KLIENCI[dostawca] = {"fal": Fal, "openrouter": OpenRouter, "kie": Kie}.get(dostawca, Higgsfield)(klucz)
     return _KLIENCI[dostawca]
 
 
@@ -414,7 +476,7 @@ def wynik_url(d: dict) -> str | None:
     for k in ("videos", "images", "audios"):
         if d.get(k):
             return d[k][0].get("url")
-    return d.get("plik")                               # wynik synchroniczny (data URI)
+    return d.get("wynik_url") or d.get("plik")        # Kie.ai / wynik synchroniczny (data URI)
 
 
 async def przygotuj(hf: Higgsfield, model, values: dict, wejscia: dict, plik_zasobu) -> tuple[str, dict, dict, dict]:

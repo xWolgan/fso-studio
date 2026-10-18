@@ -267,8 +267,20 @@ def _z_repo(dostawca: str) -> list:
     return out
 
 
+def _kie() -> list:
+    """Kie.ai: katalog zebrany z dokumentacji (narzedzia/kie_katalog.py → modele/kie-katalog.json)."""
+    try:
+        dane = json.loads((Path(MODELE) / "kie-katalog.json").read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    return [_poz(m["id"], m["nazwa"], m["obszar"], m.get("opis"), obslugiwany=True, parametry=m["parametry"],
+                 wejscia=m["wejscia"]) for m in dane.get("modele", [])]
+
+
 async def pobierz_katalog(d: str) -> list:
-    if d in ("higgsfield", "kie"):
+    if d == "kie":
+        kat = _kie()
+    elif d == "higgsfield":
         kat = _z_repo(d)
     else:
         async with httpx.AsyncClient(timeout=TIMEOUT) as c:
@@ -283,7 +295,7 @@ async def pobierz_katalog(d: str) -> list:
 def katalog(d: str) -> dict | None:
     p = KATALOGI / f"{d}.json"
     if d in ("higgsfield", "kie"):            # opisy z repo — zawsze aktualne
-        return {"czas": time.time(), "modele": _z_repo(d)}
+        return {"czas": time.time(), "modele": _z_repo(d) if d == "higgsfield" else _kie()}
     try:
         kat = json.loads(p.read_text(encoding="utf-8"))
     except Exception:
@@ -376,16 +388,21 @@ def pola_z_openapi(schemat: dict, endpoint_id: str) -> tuple[list, list]:
                     and "post" in v), None) or next(v for v in schemat.get("paths", {}).values() if "post" in v)
     wej = _rozwin(schemat, sciezka["post"]["requestBody"]["content"]["application/json"]["schema"])
     wymagane = set(wej.get("required") or [])
-    kolejnosc = wej.get("x-fal-order-properties") or list(wej.get("properties", {}))
+    kolejnosc = wej.get("x-fal-order-properties") or wej.get("x-apidog-orders") or list(wej.get("properties", {}))
+    kolejnosc += [k for k in wej.get("properties", {}) if k not in kolejnosc]
     parametry, wejscia = [], []
     for nazwa in kolejnosc:
         if nazwa not in wej.get("properties", {}) or nazwa in POMIJANE:
             continue
         p = _rozwin(schemat, wej["properties"][nazwa])
         typ, dom, tytul = p.get("type"), p.get("default"), p.get("title") or nazwa.replace("_", " ")
+        if dom is None and (p.get("enum") or typ in ("boolean", "integer", "number")) and p.get("examples"):
+            dom = p["examples"][0]                 # Kie.ai: zamiast `default` podaje przykłady
         opis = (p.get("description") or "")[:300]
         wym = nazwa in wymagane
         plik = next((r for slowo, r in WEJSCIA_PLIKOW if slowo in nazwa and (nazwa.endswith("_url") or nazwa.endswith("_urls"))), None)
+        if not plik and nazwa in ("input_url", "input_urls", "reference_image", "reference_images", "first_frame", "last_frame"):
+            plik = "obraz"
         if plik:
             wiele = typ == "array" or nazwa.endswith("_urls")
             wejscia.append({"id": nazwa, "typ": plik, "cel": nazwa, "etykieta": {"pl": tytul, "en": tytul},

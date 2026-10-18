@@ -144,6 +144,14 @@ def odswiez_chmure():
         if poz.get("z_repo"):
             continue                                   # HiggsField / Kie.ai: modele z YAML, już w MODELS
         mid = dostawcy.id_studia(d, poz["id"])
+        if d == "kie":                                 # pola formularza są w katalogu (z dokumentacji Kie.ai)
+            opis = (poz.get("opis") or "").strip()
+            MODELS[mid] = Model(id=mid, nazwa=poz["nazwa"], obszar=poz["obszar"], backend="api", workflow=None,
+                                wyjscie=poz["obszar"], opis={"pl": opis, "en": opis},
+                                licencja={"pl": "API — warunki dostawcy i modelu", "en": "API — provider and model terms"},
+                                wejscia=poz["wejscia"], parametry=poz["parametry"], kolejnosc=50 + i, dostawca="kie",
+                                endpointy=[{"endpoint": poz["id"]}], stale={"chmura": True, "api_model": poz["id"]})
+            continue
         if d == "fal" or (d in ("openrouter", "openai", "gemini") and poz["obszar"] != "tekst"):
             sch = dostawcy.schemat(d, poz["id"])
             if not sch:
