@@ -516,7 +516,12 @@ pre.z-kopiuj .kopiuj-kod:hover { opacity: 1; }
 .u-filtry { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 12px 0 6px; }
 .u-filtry input[type=text] { flex: 1 1 220px; min-width: 0; }
 .u-licznik, .u-ile { color: var(--muted); font-size: 12.5px; font-weight: normal; }
-.u-grupa h3 { font-size: 13.5px; margin: 14px 0 4px; color: var(--ink-2); }
+.u-lista { margin-top: 12px; }
+.u-lista > summary, .u-grupa > summary { cursor: pointer; color: var(--ink-2); user-select: none; }
+.u-lista > summary { font-size: 13.5px; }
+.u-grupa { margin: 8px 0 0 4px; }
+.u-grupa > summary { font-size: 13.5px; margin-bottom: 4px; }
+.u-grupa > .u-model, .u-grupa > .btn { margin-left: 18px; }
 .u-model { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; cursor: pointer; flex-wrap: wrap; }
 .u-model.off { cursor: default; opacity: .6; }
 .u-mnazwa { color: var(--ink); }
