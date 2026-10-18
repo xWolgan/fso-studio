@@ -247,7 +247,13 @@ async def run_api(job: dict):
         if not url:
             raise RuntimeError(K("e_api_brak_pliku"))
         used = info.get("used") or {}
-        ext = Path(url.split("?")[0]).suffix.lower() or ".mp4"
+        if url.startswith("data:"):                    # wynik od razu w odpowiedzi (np. OpenRouter /images)
+            typ = url[5:].split(";", 1)[0]
+            ext = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/svg+xml": ".svg", "audio/mpeg": ".mp3",
+                   "audio/mp3": ".mp3", "audio/wav": ".wav", "audio/x-wav": ".wav", "audio/ogg": ".ogg", "audio/flac": ".flac",
+                   "audio/pcm": ".wav", "video/mp4": ".mp4"}.get(typ, ".bin")
+        else:
+            ext = Path(url.split("?")[0]).suffix.lower() or ".mp4"
         dest, uid = store.result_path(job["login"], job.get("ujecie_id"), model.obszar, model.id, used.get("seed", ""), ext)
         await hf.download(url, dest)
         nazwa = "api:" + (model.dostawca or "")

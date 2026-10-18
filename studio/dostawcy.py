@@ -156,7 +156,9 @@ async def _openrouter(c) -> list:
             continue
         cena = f"{_usd_m(p.get('prompt'))} / {_usd_m(p.get('completion'))} USD za 1M tokenów" if ob == "tekst" else ""
         out.append(_poz(m["id"], m.get("name") or m["id"], ob, m.get("description"), cena, "image" in we,
-                        obslugiwany=ob == "tekst", narzedzia="tools" in (m.get("supported_parameters") or [])))
+                        obslugiwany=ob in ("tekst", "obraz", "wideo") or "speech" in wy,
+                        narzedzia="tools" in (m.get("supported_parameters") or []),
+                        glosy=m.get("supported_voices") or [], mowa_api="speech" in wy))
     return out
 
 
@@ -287,7 +289,10 @@ def katalog(d: str) -> dict | None:
     except Exception:
         return None
     for m in kat.get("modele", []):                   # obsługa zależy od wersji Studia, nie od chwili pobrania katalogu
-        m["obslugiwany"] = m["obszar"] == "tekst" if d in ("openrouter", "anthropic", "openai", "gemini") else True
+        if d == "openrouter":
+            m["obslugiwany"] = m["obszar"] in ("tekst", "obraz", "wideo") or bool(m.get("mowa_api"))
+        else:
+            m["obslugiwany"] = m["obszar"] == "tekst" if d in ("anthropic", "openai", "gemini") else True
     return kat
 
 
@@ -411,8 +416,66 @@ def _plik_schematu(d: str, model_id: str) -> Path:
     return SCHEMATY / (id_studia(d, model_id) + ".json")
 
 
+def _et(pl, en, fr=None):
+    return {"pl": pl, "en": en, "fr": fr or en}
+
+
+async def _schemat_openrouter(model_id: str) -> dict:
+    """OpenRouter nie opisuje parametrów modeli mediów — stały formularz wg rodzaju (obraz / wideo / mowa)."""
+    poz = next((m for m in (katalog("openrouter") or {}).get("modele", []) if m["id"] == model_id), None)
+    if not poz:
+        raise RuntimeError("model spoza katalogu — odśwież listę")
+    prompt = {"id": "prompt", "typ": "prompt", "cel": ["prompt"], "wymagane": True}
+    wybor = lambda i, cel, et, opcje, dom, **x: {"id": i, "typ": "wybor", "cel": [cel], "etykieta": et, "opcje": opcje,
+                                                "domyslnie": dom if dom in opcje else opcje[0], **x}
+    if poz["obszar"] == "obraz":
+        domyslna = {"": _et("domyślna", "default", "par défaut")}      # „” = nie wysyłamy — decyduje model
+        par = [prompt, wybor("aspect_ratio", "aspect_ratio", _et("proporcje", "aspect ratio", "proportions"),
+                             ["", "1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "4:5", "5:4", "21:9"], "",
+                             pomin_puste=True, etykiety_opcji=domyslna),
+               wybor("resolution", "resolution", _et("rozdzielczość", "resolution", "résolution"), ["", "1K", "2K", "4K"], "",
+                     pomin_puste=True, etykiety_opcji=domyslna)]
+        wej = [{"id": "input_references", "typ": "obraz", "cel": "input_references", "wiele": 4,
+                "etykieta": _et("obrazy referencyjne", "reference images", "images de référence")}] if poz.get("obraz_we") else []
+        return {"parametry": par, "wejscia": wej, "endpoint": "images", "cena": ""}
+    if poz["obszar"] == "wideo":
+        async with httpx.AsyncClient(timeout=TIMEOUT) as c:
+            r = await c.get("https://openrouter.ai/api/v1/videos/models", headers=naglowki("openrouter"))
+            r.raise_for_status()
+        v = next((x for x in r.json().get("data", []) if x["id"] == model_id or x.get("canonical_slug") == model_id), {})
+        dl = [str(x) for x in v.get("supported_durations") or [5]]
+        par = [prompt, wybor("duration", "duration", _et("długość (s)", "length (s)", "durée (s)"), dl, dl[0], wartosc_typ="int")]
+        if v.get("supported_resolutions"):
+            par.append(wybor("resolution", "resolution", _et("rozdzielczość", "resolution", "résolution"), v["supported_resolutions"],
+                             "720p"))
+        if v.get("supported_aspect_ratios"):
+            par.append(wybor("aspect_ratio", "aspect_ratio", _et("proporcje", "aspect ratio", "proportions"), v["supported_aspect_ratios"],
+                             "16:9"))
+        par.append({"id": "generate_audio", "typ": "przelacznik", "cel": ["generate_audio"], "domyslnie": True,
+                    "etykieta": _et("z dźwiękiem", "with sound", "avec son")})
+        wej = [{"id": "first_frame", "typ": "obraz", "cel": "first_frame", "etykieta": _et("pierwsza klatka", "first frame", "première image")},
+               {"id": "last_frame", "typ": "obraz", "cel": "last_frame", "etykieta": _et("ostatnia klatka", "last frame", "dernière image")},
+               {"id": "input_references", "typ": "obraz", "cel": "input_references", "wiele": 4,
+                "etykieta": _et("obrazy referencyjne", "reference images", "images de référence")}]
+        return {"parametry": par, "wejscia": wej, "endpoint": "videos", "cena": ""}
+    if poz.get("mowa_api"):
+        glosy = poz.get("glosy") or []
+        par = [{**prompt, "cel": ["input"]}]
+        if glosy:
+            par.append(wybor("voice", "voice", _et("głos", "voice", "voix"), glosy, glosy[0]))
+        par.append({"id": "instructions", "typ": "tekst", "cel": ["instructions"], "pomin_puste": True,
+                    "etykieta": _et("jak mówić (ton, tempo)", "how to speak (tone, pace)", "comment parler (ton, rythme)")})
+        return {"parametry": par, "wejscia": [], "endpoint": "audio/speech", "cena": "", "stale": {"response_format": "mp3"}}
+    raise RuntimeError("tego rodzaju modelu Studio jeszcze nie obsługuje")
+
+
 async def pobierz_schemat(d: str, model_id: str) -> dict:
-    """fal.ai: OpenAPI endpointu + cena → zapis obok katalogu. Zwraca {parametry, wejscia, cena}."""
+    """Parametry modelu mediów → zapis obok katalogu. fal.ai: z OpenAPI endpointu + cena; OpenRouter: stały formularz."""
+    if d == "openrouter":
+        out = await _schemat_openrouter(model_id)
+        SCHEMATY.mkdir(parents=True, exist_ok=True)
+        _plik_schematu(d, model_id).write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+        return out
     async with httpx.AsyncClient(timeout=TIMEOUT) as c:
         h = naglowki("fal") if klucz("fal") else {}
         r = await c.get("https://api.fal.ai/v1/models", params={"endpoint_id": model_id, "expand": "openapi-3.0"}, headers=h)

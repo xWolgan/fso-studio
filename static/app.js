@@ -141,7 +141,7 @@ function fieldFor(p) {
   if (p.typ === "proporcje" || p.typ === "tryb" || p.typ === "wybor") {
     const chips = h("div", { class: "chips" });
     for (const o of p.opcje) {
-      const c = h("button", { class: "chip" + (String(v) === String(o) ? " on" : ""), type: "button" }, (CHIP_LABELS[o] ? T[CHIP_LABELS[o]] : "") || o);
+      const c = h("button", { class: "chip" + (String(v) === String(o) ? " on" : ""), type: "button" }, (p.etykiety_opcji && p.etykiety_opcji[o]) || (CHIP_LABELS[o] ? T[CHIP_LABELS[o]] : "") || o);
       c.onclick = () => { set(o); chips.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === c)); };
       chips.append(c);
     }

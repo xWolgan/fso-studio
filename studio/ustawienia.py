@@ -80,7 +80,9 @@ async def wybor(req: Request):
     j = await req.json()
     d = _d(j.get("dostawca") or "")
     mid = str(j.get("id") or "")
-    if d == "fal" and j.get("tak") and not dostawcy.schemat(d, mid):
+    poz = next((m for m in (dostawcy.katalog(d) or {}).get("modele", []) if m["id"] == mid), None)
+    media = d == "fal" or (d == "openrouter" and poz and poz["obszar"] != "tekst")
+    if media and j.get("tak") and not dostawcy.schemat(d, mid):
         try:
             await dostawcy.pobierz_schemat(d, mid)          # parametry modelu → formularz w obszarze
         except Exception as e:

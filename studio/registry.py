@@ -144,17 +144,19 @@ def odswiez_chmure():
         if poz.get("z_repo"):
             continue                                   # HiggsField / Kie.ai: modele z YAML, już w MODELS
         mid = dostawcy.id_studia(d, poz["id"])
-        if d == "fal":
+        if d == "fal" or (d == "openrouter" and poz["obszar"] != "tekst"):
             sch = dostawcy.schemat(d, poz["id"])
             if not sch:
                 continue
             opis = (poz.get("opis") or "").strip()
             MODELS[mid] = Model(id=mid, nazwa=poz["nazwa"], obszar=poz["obszar"], backend="api", workflow=None,
                                 wyjscie=poz["obszar"], opis={"pl": opis, "en": opis},
-                                licencja={"pl": "API fal.ai — warunki modelu", "en": "fal.ai API — model terms"},
+                                licencja={"pl": "API — warunki dostawcy i modelu", "en": "API — provider and model terms"},
                                 uwagi={"pl": sch.get("cena") or "", "en": sch.get("cena") or ""} if sch.get("cena") else {},
-                                wejscia=sch["wejscia"], parametry=sch["parametry"], kolejnosc=50 + i, dostawca="fal",
-                                endpointy=[{"endpoint": poz["id"]}], stale={"chmura": True, "api_model": poz["id"]})
+                                wejscia=sch["wejscia"], parametry=sch["parametry"], kolejnosc=50 + i, dostawca=d,
+                                endpointy=[{"endpoint": sch.get("endpoint") or poz["id"]}],
+                                stale={"chmura": True, "api_model": poz["id"], **({"model": poz["id"]} if d == "openrouter" else {}),
+                                       **(sch.get("stale") or {})})
             continue
         if poz["obszar"] != "tekst":
             continue

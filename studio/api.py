@@ -25,7 +25,8 @@ USD_ZA_SEKUNDE = float(BUDZET.get("usd_za_sekunde", 0.042))     # „sekunda bud
 PROG_ZADANIA_S = float(BUDZET.get("prog_zadania_s", 600))      # zadanie lokalne dłuższe niż to → propozycja API
 CZAS_API_S = 180.0                                              # czas generacji w API, gdy brak historii
 DOSTAWCY = {"higgsfield": {"klucz_env": "HF_KEY", "rownolegle": 10, "nazwa": "HiggsField"},
-            "fal": {"klucz_env": "FAL_KEY", "rownolegle": 10, "nazwa": "fal.ai"}}
+            "fal": {"klucz_env": "FAL_KEY", "rownolegle": 10, "nazwa": "fal.ai"},
+            "openrouter": {"klucz_env": "OPENROUTER_API_KEY", "rownolegle": 6, "nazwa": "OpenRouter"}}
 DOSTAWCY.update(CFG.get("api") or {})
 
 TYPY_PLIKOW = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif",
@@ -300,6 +301,84 @@ class Fal(Higgsfield):
             return False
 
 
+# --- OpenRouter: obraz (/images, od razu), mowa (/audio/speech, od razu), wideo (/videos, kolejka) ---
+
+class OpenRouter(Higgsfield):
+    BASE = "https://openrouter.ai/api/v1"
+
+    def __init__(self, klucz: str):
+        super().__init__(klucz)
+        self.http.headers["Authorization"] = f"Bearer {klucz}"
+        self._gotowe: dict[str, str] = {}             # wyniki zapytań synchronicznych (data URI) do odebrania w status()
+
+    async def upload(self, path: Path) -> str:
+        import base64
+        typ = TYPY_PLIKOW.get(path.suffix.lower())
+        if not typ:
+            raise ValueError(K("e_api_typ", t=path.suffix, n=path.name))
+        return f"data:{typ};base64," + base64.b64encode(path.read_bytes()).decode()
+
+    @staticmethod
+    def _obrazy(urls) -> list:
+        return [{"type": "image_url", "image_url": {"url": u}} for u in (urls if isinstance(urls, list) else [urls])]
+
+    async def submit(self, endpoint: str, args: dict, idem: str) -> dict:
+        import base64
+        args = dict(args)
+        if args.get("input_references"):
+            args["input_references"] = self._obrazy(args["input_references"])
+        klatki = [{**self._obrazy(args.pop(k))[0], "frame_type": k} for k in ("first_frame", "last_frame") if args.get(k)]
+        args.pop("first_frame", None), args.pop("last_frame", None)
+        if klatki:
+            args["frame_images"] = klatki
+        r = await self.http.post("/" + endpoint, json=args, timeout=httpx.Timeout(600, connect=15))
+        if r.status_code >= 300:
+            if r.status_code in (401, 403):
+                raise RuntimeError(K("e_api_dostep"))
+            if r.status_code == 402:
+                raise RuntimeError(K("e_api_srodki"))
+            raise RuntimeError(K("e_api_odrzucilo", m=f"{r.status_code}: {self._blad(r)}"))
+        if endpoint == "videos":
+            d = r.json()
+            return {"request_id": d["id"], "status_url": d.get("polling_url") or f"{self.BASE}/videos/{d['id']}", "cancel_url": None}
+        if endpoint == "images":
+            obraz = (r.json().get("data") or [{}])[0]
+            if not obraz.get("b64_json"):
+                raise RuntimeError(K("e_api_brak_pliku"))
+            uri = f"data:{obraz.get('media_type') or 'image/png'};base64,{obraz['b64_json']}"
+        else:                                          # audio/speech: surowe bajty dźwięku
+            uri = f"data:{r.headers.get('content-type', 'audio/mpeg').split(';')[0]};base64," + base64.b64encode(r.content).decode()
+        self._gotowe[idem] = uri
+        return {"request_id": idem, "status_url": "gotowe:" + idem, "cancel_url": None}
+
+    async def status(self, status_url: str) -> dict:
+        if status_url.startswith("gotowe:"):
+            uri = self._gotowe.pop(status_url[7:], None)
+            return {"status": "completed", "plik": uri} if uri else {"status": "failed", "error": "wynik utracony (restart)"}
+        d = await super().status(status_url)
+        st = d.get("status")
+        if st in ("pending", "in_progress"):
+            return {"status": "queued" if st == "pending" else "in_progress"}
+        if st == "completed":
+            return {"status": "completed", "video": {"url": f"{self.BASE}/videos/{d['id']}/content?index=0"}}
+        return {"status": "failed", "error": d.get("error") or st}
+
+    async def cancel(self, cancel_url) -> bool:
+        return False
+
+    async def download(self, url: str, dest: Path):
+        if url.startswith("data:"):
+            import base64
+            dest.write_bytes(base64.b64decode(url.split(",", 1)[1]))
+            return
+        async with self.http.stream("GET", url, timeout=httpx.Timeout(600, connect=15)) as r:   # z kluczem
+            if r.status_code != 200:
+                raise RuntimeError(K("e_api_pobranie", m=r.status_code))
+            with open(dest, "wb") as f:
+                async for chunk in r.aiter_bytes(1 << 20):
+                    f.write(chunk)
+
+
 _KLIENCI: dict[str, Higgsfield] = {}
 
 
@@ -309,7 +388,7 @@ def klient(dostawca: str) -> Higgsfield:
         klucz = os.environ.get((d or {}).get("klucz_env", ""), "")
         if not klucz:
             raise RuntimeError(f"brak klucza API dostawcy {dostawca}")
-        _KLIENCI[dostawca] = (Fal if dostawca == "fal" else Higgsfield)(klucz)
+        _KLIENCI[dostawca] = {"fal": Fal, "openrouter": OpenRouter}.get(dostawca, Higgsfield)(klucz)
     return _KLIENCI[dostawca]
 
 
@@ -322,7 +401,7 @@ def wynik_url(d: dict) -> str | None:
     for k in ("videos", "images", "audios"):
         if d.get(k):
             return d[k][0].get("url")
-    return None
+    return d.get("plik")                               # wynik synchroniczny (data URI)
 
 
 async def przygotuj(hf: Higgsfield, model, values: dict, wejscia: dict, plik_zasobu) -> tuple[str, dict, dict, dict]:
