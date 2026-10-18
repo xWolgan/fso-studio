@@ -132,6 +132,7 @@ def wariant(model: Model, wejscia: dict) -> tuple[Model, dict]:
 
 
 MODELS = load_all()
+KOMPUTER: set[str] = set()     # modele lokalne gotowe w ComfyUI ustawionym w Ustawieniach (komputer.zastosuj)
 
 
 def odswiez_chmure():
@@ -168,7 +169,7 @@ def odswiez_chmure():
             continue
         if poz["obszar"] != "tekst":
             continue
-        nazwa_d = dostawcy.DOSTAWCY[d]["nazwa"]
+        nazwa_d = lokalnie(dostawcy.DOSTAWCY[d]["nazwa"], "pl")
         opis = (poz.get("opis") or "").strip()
         MODELS[mid] = Model(id=mid, nazwa=poz["nazwa"], obszar="tekst", backend="llm", workflow=None, wyjscie="tekst",
                             opis={"pl": f"{nazwa_d}. {opis}".strip(), "en": f"{nazwa_d}. {opis}".strip()},
@@ -186,6 +187,8 @@ def uruchamialny(m: Model) -> bool:
     if m.backend == "api":
         from . import api, dostawcy
         return api.dostepny(m) and (m.stale.get("chmura") or m.id in dostawcy.wybrane(m.dostawca or ""))   # wybrany w Ustawieniach
+    if m.backend == "comfyui" and m.id in KOMPUTER:
+        return True
     if m.backend in ("comfyui", "http"):
         for x in CFG.get("maszyny") or []:
             if m.obszar not in (x.get("role") or []) or (x.get("modele") is not None and m.id not in x["modele"]):

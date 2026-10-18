@@ -83,21 +83,20 @@ reaches the limit set in Settings, the Studio pauses paid generations (conversat
 - Conversation and prompt content goes to the provider whose model you choose. In conversations via OpenRouter the Studio uses only
   providers that don't collect request data (for image, video and speech the model provider's terms apply).
 
-## Optional: local models (ComfyUI)
+## Optional: local models
 
-Have an NVIDIA GPU and ComfyUI (≥ 0.39)? The Studio can also generate locally, for free — image (Z-Image Turbo,
-Qwen-Image, Ideogram 4), video (MiniMax H3, LTX-2, WAN 2.2), music (ACE-Step, MiniMax Music 3, YuE 2), speech (OmniVoice).
-Add a machine in `config.yaml`:
-```yaml
-maszyny:                                  # "machines"
-  - id: my-pc
-    comfyui: http://127.0.0.1:8188
-    role: [obraz, muzyka, sfx, mowa]      # image, music, sfx, speech; add "wideo" (video) if your GPU can handle it
-modele_wylaczone: [ideogram-4]            # models whose weights you didn't download
-```
-Model files to download and licenses: **[MODELE.md](MODELE.md)** (some models are non-commercial).
-A custom local model = a YAML file in `modele/<area>/` + a ComfyUI workflow in API format in `workflows/`
-(in ComfyUI: *Workflow → Export (API)*); see the existing files for examples.
+Free, on your own computer. Everything is set up in **Settings** — no file editing.
+
+- **Text:** install [LM Studio](https://lmstudio.ai) (start the server: Developer → Start Server) or
+  [Ollama](https://ollama.com/download). In Settings → **Local**, enter the address (LM Studio: `http://127.0.0.1:1234/v1`,
+  Ollama: `http://127.0.0.1:11434/v1`), fetch the list and tick models.
+- **Image, video, music, speech:** install [ComfyUI](https://www.comfy.org/download) (NVIDIA GPU; video realistically
+  24–48 GB VRAM) and download the model files listed in **[MODELE.md](MODELE.md)** (some models are non-commercial).
+  In Settings → **ComfyUI on this computer**, enter the address (`http://127.0.0.1:8188`) — the Studio checks which
+  models you have installed (✓ ready / ✗ what's missing) and enables only those.
+
+Advanced: several ComfyUI machines or custom models — `config.yaml` → `maszyny` and YAML files in `modele/<area>/`
++ a ComfyUI workflow in API format in `workflows/` (see the existing files).
 
 ## Notes
 

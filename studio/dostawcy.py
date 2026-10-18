@@ -36,7 +36,8 @@ DOSTAWCY = {
     "gemini": {"nazwa": "Gemini (Google)", "klucz_env": "GEMINI_API_KEY", "klucz_url": "https://aistudio.google.com/apikey",
                "chat": "https://generativelanguage.googleapis.com/v1beta/openai"},
     # modele na tym komputerze: zamiast klucza — adres serwera zgodnego z OpenAI (Ollama, LM Studio, llama.cpp)
-    "lokalne": {"nazwa": "Lokalnie (Ollama / LM Studio)", "klucz_env": "LOKALNY_LLM_URL", "klucz_url": "https://ollama.com/download",
+    "lokalne": {"nazwa": {"pl": "Lokalnie (Ollama / LM Studio)", "en": "Local (Ollama / LM Studio)",
+                          "fr": "Local (Ollama / LM Studio)"}, "klucz_env": "LOKALNY_LLM_URL", "klucz_url": "https://lmstudio.ai",
                 "adres": "http://127.0.0.1:11434/v1"},
 }
 OBSZARY_CHMURY = ("tekst", "obraz", "wideo", "muzyka", "sfx", "mowa")

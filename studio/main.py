@@ -55,7 +55,9 @@ def aktywne() -> set[str]:
 async def startup():
     store.init()
     from .registry import odswiez_chmure
+    from . import dostawcy, komputer
     odswiez_chmure()                              # modele wybrane w Ustawieniach
+    komputer.zastosuj(dostawcy.ustawienia().get("comfyui"))   # ComfyUI z Ustawień (bez config.yaml)
     asyncio.create_task(scheduler.loop())
 
 

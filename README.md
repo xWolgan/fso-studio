@@ -83,21 +83,20 @@ z Ustawień, Studio wstrzyma płatne generacje (rozmowy działają dalej).
 - Treść rozmów i promptów trafia do dostawcy, którego model wybierzesz. W rozmowach przez OpenRouter Studio wybiera tylko
   dostawców, którzy nie zbierają danych z zapytań (przy obrazie, wideo i mowie obowiązują warunki dostawcy modelu).
 
-## Opcjonalnie: modele lokalne (ComfyUI)
+## Opcjonalnie: modele lokalne
 
-Masz kartę NVIDIA i ComfyUI (≥ 0.39)? Studio umie też generować lokalnie, za darmo — obraz (Z-Image Turbo, Qwen-Image,
-Ideogram 4), wideo (MiniMax H3, LTX-2, WAN 2.2), muzykę (ACE-Step, MiniMax Music 3, YuE 2), mowę (OmniVoice).
-Dopisz maszynę w `config.yaml`:
-```yaml
-maszyny:
-  - id: moj-pc
-    comfyui: http://127.0.0.1:8188
-    role: [obraz, muzyka, sfx, mowa]     # dopisz „wideo”, jeśli karta to udźwignie (realnie 24–48 GB VRAM)
-modele_wylaczone: [ideogram-4]           # modele, których wag nie pobrałeś
-```
-Pliki modeli do pobrania i licencje: **[MODELE.md](MODELE.md)** (część modeli ma licencje niekomercyjne).
-Własny model lokalny = plik YAML w `modele/<obszar>/` + workflow ComfyUI w formacie API w `workflows/`
-(w ComfyUI: *Workflow → Export (API)*); przykłady w istniejących plikach.
+Bez kosztów, na Twoim komputerze. Wszystko ustawiasz w **Ustawieniach** — bez edycji plików.
+
+- **Tekst:** zainstaluj [LM Studio](https://lmstudio.ai) (włącz serwer: Developer → Start Server) albo
+  [Ollamę](https://ollama.com/download). W Ustawieniach → **Lokalnie** wpisz adres (LM Studio: `http://127.0.0.1:1234/v1`,
+  Ollama: `http://127.0.0.1:11434/v1`), pobierz listę i zaznacz modele.
+- **Obraz, wideo, muzyka, mowa:** zainstaluj [ComfyUI](https://www.comfy.org/download) (karta NVIDIA; wideo realnie
+  24–48 GB VRAM) i pobierz pliki modeli według **[MODELE.md](MODELE.md)** (część modeli ma licencje niekomercyjne).
+  W Ustawieniach → **ComfyUI na tym komputerze** wpisz adres (`http://127.0.0.1:8188`) — Studio sprawdzi, które modele
+  masz zainstalowane (✓ gotowy / ✗ czego brakuje), i włączy tylko te.
+
+Zaawansowane: kilka maszyn z ComfyUI albo własne modele — `config.yaml` → `maszyny` oraz pliki YAML w `modele/<obszar>/`
++ workflow ComfyUI w formacie API w `workflows/` (przykłady w istniejących plikach).
 
 ## Uwagi
 

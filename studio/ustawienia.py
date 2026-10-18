@@ -35,14 +35,47 @@ def _po_zmianie():
 @router.get("/api/ustawienia")
 async def stan(req: Request):
     _lokalnie(req)
-    return {"dostawcy": _dostawcy(), "limit_usd": dostawcy.ustawienia().get("limit_usd_miesiac")}
+    return {"dostawcy": _dostawcy(req), "limit_usd": dostawcy.ustawienia().get("limit_usd_miesiac"),
+            "comfyui": _comfy_stan()}
 
 
-def _dostawcy() -> list:
+def _comfy_stan() -> dict:
+    from .komputer import DOMYSLNY
+    from .registry import MODELS
+    st = dostawcy.ustawienia().get("comfyui") or {}
+    nazwa = lambda i: MODELS[i].nazwa if i in MODELS else i
+    widoczne = lambda ids: [i for i in ids if i in MODELS and not MODELS[i].ukryty]
+    return {"adres": st.get("adres") or "", "domyslny": DOMYSLNY, "info": st.get("info") or "", "ok": bool(st.get("ok")),
+            "gotowe": [{"id": i, "nazwa": nazwa(i), "obszar": MODELS[i].obszar} for i in widoczne(st.get("dostepne") or [])],
+            "braki": [{"id": i, "nazwa": nazwa(i), "obszar": MODELS[i].obszar, "czego": b[:6], "ile": len(b)}
+                      for i, b in (st.get("braki") or {}).items() if i in widoczne([i])]}
+
+
+@router.post("/api/ustawienia/comfyui")
+async def comfyui(req: Request):
+    """Zapis adresu ComfyUI i sprawdzenie, które modele lokalne da się uruchomić (pusty adres = wyłączenie)."""
+    from . import komputer
+    _lokalnie(req)
+    adres = str((await req.json()).get("adres") or "").strip().rstrip("/")
+    u = dostawcy.ustawienia()
+    if not adres:
+        u.pop("comfyui", None)
+    else:
+        if not adres.startswith(("http://", "https://")):
+            raise HTTPException(400)
+        u["comfyui"] = {"adres": adres, **(await komputer.sprawdz(adres))}
+    dostawcy.zapisz_ustawienia(u)
+    komputer.zastosuj(u.get("comfyui"))
+    return _comfy_stan()
+
+
+def _dostawcy(req: Request) -> list:
+    from .registry import lokalnie
+    lg = req.cookies.get("lang") if req.cookies.get("lang") in ("pl", "en", "fr") else "pl"
     out = []
     for d, x in dostawcy.DOSTAWCY.items():
         kat = dostawcy.katalog(d)
-        out.append({"id": d, "nazwa": x["nazwa"], "klucz_url": x["klucz_url"], "format": x.get("format"),
+        out.append({"id": d, "nazwa": lokalnie(x["nazwa"], lg), "klucz_url": x["klucz_url"], "format": x.get("format"),
                     "adres": x.get("adres"), "adres_teraz": dostawcy.klucz(d) if x.get("adres") else None,   # adres nie jest tajny
                     "ma_klucz": bool(dostawcy.klucz(d)), "katalog_czas": (kat or {}).get("czas"),
                     "liczba": len((kat or {}).get("modele") or []), "wybrane": dostawcy.wybrane(d)})

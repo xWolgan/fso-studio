@@ -107,6 +107,45 @@ function rysujModele(d, modele, wybrane, lista, liczby) {
   lista.replaceChildren(h("div", { class: "u-filtry" }, szukaj, h("label", { class: "inline" }, tylko, " " + T.u_tylko_wybrane), licznik), grupy);
 }
 
+function sekcjaComfy(st) {
+  const pole = h("input", { type: "text", autocomplete: "off", spellcheck: "false", placeholder: T.u_adres + " · " + st.domyslny });
+  pole.value = st.adres || st.domyslny;
+  const stan = h("span", { class: "u-stan" + (st.adres ? " ok" : "") }, st.adres ? T.u_jest_adres : T.u_brak_adresu);
+  const info = h("span", { class: "u-info" + (st.adres ? (st.ok ? " ok" : " err") : "") }, st.info || "");
+  const lista = h("div", { class: "u-modele" });
+  const rysuj = (s) => {
+    stan.textContent = s.adres ? T.u_jest_adres : T.u_brak_adresu; stan.classList.toggle("ok", Boolean(s.adres));
+    info.textContent = s.info || ""; info.className = "u-info" + (s.adres ? (s.ok ? " ok" : " err") : "");
+    const grupy = OBSZARY.map((o) => {
+      const g = s.gotowe.filter((m) => m.obszar === o), b = s.braki.filter((m) => m.obszar === o);
+      if (!g.length && !b.length) return null;
+      return h("details", { class: "u-grupa", open: Boolean(g.length) },
+        h("summary", {}, T["obszar." + o] || o, h("span", { class: "u-ile" }, " · " + tf("u_gotowe", { n: g.length, z: g.length + b.length }))),
+        ...g.map((m) => h("div", { class: "u-model" }, h("span", { class: "u-ok" }, "✓"), h("span", { class: "u-mnazwa" }, m.nazwa))),
+        ...b.map((m) => h("div", { class: "u-model off", title: m.czego.join("\n") }, h("span", {}, "✗"), h("span", { class: "u-mnazwa" }, m.nazwa),
+          h("span", { class: "u-mid" }, T.u_brakuje + " " + m.czego.slice(0, 2).join(", ") + (m.ile > 2 ? ` (+${m.ile - 2})` : "")))));
+    }).filter(Boolean);
+    lista.replaceChildren(...(grupy.length ? [h("details", { class: "u-lista" }, h("summary", {}, T.u_modele_lokalne), ...grupy)] : []));
+  };
+  const zapisz = async (adres) => {
+    info.textContent = T.u_sprawdzam; info.className = "u-info";
+    try { const s = await api("/api/ustawienia/comfyui", { method: "POST", body: JSON.stringify({ adres }) });
+      if (!adres) pole.value = st.domyslny; rysuj(s); }
+    catch (e) { info.textContent = e.message; info.className = "u-info err"; }
+  };
+  pole.addEventListener("keydown", (e) => { if (e.key === "Enter") zapisz(pole.value.trim()); });
+  rysuj(st);
+  return h("section", { class: "u-dostawca" },
+    h("div", { class: "u-nag" }, h("h2", {}, T.u_comfy), stan, h("span", { style: "flex:1" }),
+      h("a", { class: "link", href: "https://www.comfy.org/download", target: "_blank", rel: "noopener" }, T.u_gdzie_comfy + " ↗")),
+    h("p", { class: "u-info", style: "margin:6px 0 0" }, T.u_comfy_opis),
+    h("div", { class: "u-klucz" }, pole,
+      h("button", { class: "btn primary", onclick: () => zapisz(pole.value.trim()) }, T.u_zapisz),
+      h("button", { class: "btn", onclick: () => zapisz(pole.value.trim()) }, T.u_sprawdz),
+      h("button", { class: "btn quiet", onclick: () => zapisz("") }, T.u_usun_adres), info),
+    lista);
+}
+
 function sekcjaLimitu(limit) {
   const pole = h("input", { type: "number", min: "0", step: "1", placeholder: T.u_limit_brak, style: "width:160px" });
   if (limit) pole.value = limit;
@@ -127,6 +166,7 @@ function sekcjaLimitu(limit) {
   try {
     const st = await api("/api/ustawienia");
     const ds = Array.isArray(st) ? st : (st.dostawcy || []);   // starszy serwer zwracał samą listę
-    box.replaceChildren(...(Array.isArray(st) ? [] : [sekcjaLimitu(st.limit_usd)]), ...ds.map(sekcja));
+    box.replaceChildren(...(Array.isArray(st) ? [] : [sekcjaLimitu(st.limit_usd)]), ...ds.map(sekcja),
+      ...(st.comfyui ? [sekcjaComfy(st.comfyui)] : []));
   } catch (e) { box.replaceChildren(h("p", { class: "u-puste err" }, e.message)); }
 })();
