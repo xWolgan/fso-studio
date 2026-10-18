@@ -144,7 +144,7 @@ def odswiez_chmure():
         if poz.get("z_repo"):
             continue                                   # HiggsField / Kie.ai: modele z YAML, już w MODELS
         mid = dostawcy.id_studia(d, poz["id"])
-        if d == "fal" or (d == "openrouter" and poz["obszar"] != "tekst"):
+        if d == "fal" or (d in ("openrouter", "openai", "gemini") and poz["obszar"] != "tekst"):
             sch = dostawcy.schemat(d, poz["id"])
             if not sch:
                 continue
@@ -155,7 +155,7 @@ def odswiez_chmure():
                                 uwagi={"pl": sch.get("cena") or "", "en": sch.get("cena") or ""} if sch.get("cena") else {},
                                 wejscia=sch["wejscia"], parametry=sch["parametry"], kolejnosc=50 + i, dostawca=d,
                                 endpointy=[{"endpoint": sch.get("endpoint") or poz["id"]}],
-                                stale={"chmura": True, "api_model": poz["id"], **({"model": poz["id"]} if d == "openrouter" else {}),
+                                stale={"chmura": True, "api_model": poz["id"], **({"model": poz["id"]} if d in ("openrouter", "openai", "gemini") else {}),
                                        **(sch.get("stale") or {})})
             continue
         if poz["obszar"] != "tekst":

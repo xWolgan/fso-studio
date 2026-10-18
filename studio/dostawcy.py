@@ -219,7 +219,7 @@ async def _openai(c) -> list:
             ob = "tekst"
         else:
             continue
-        out.append(_poz(i, i, ob, obraz_we=ob == "tekst", obslugiwany=ob == "tekst", narzedzia=True))
+        out.append(_poz(i, i, ob, obraz_we=ob == "tekst", obslugiwany=ob in ("tekst", "obraz", "mowa"), narzedzia=True))
     return out
 
 
@@ -248,7 +248,7 @@ async def _gemini(c) -> list:
             else:
                 continue
             out.append(_poz(i, m.get("displayName") or i, ob, m.get("description"), obraz_we=ob == "tekst",
-                            obslugiwany=ob == "tekst", narzedzia=True))
+                            obslugiwany=ob in ("tekst", "obraz"), narzedzia=True))
         token = j.get("nextPageToken")
         if not token:
             break
@@ -291,8 +291,12 @@ def katalog(d: str) -> dict | None:
     for m in kat.get("modele", []):                   # obsługa zależy od wersji Studia, nie od chwili pobrania katalogu
         if d == "openrouter":
             m["obslugiwany"] = m["obszar"] in ("tekst", "obraz", "wideo") or bool(m.get("mowa_api"))
+        elif d == "openai":
+            m["obslugiwany"] = m["obszar"] in ("tekst", "obraz", "mowa")
+        elif d == "gemini":
+            m["obslugiwany"] = m["obszar"] in ("tekst", "obraz")
         else:
-            m["obslugiwany"] = m["obszar"] == "tekst" if d in ("anthropic", "openai", "gemini") else True
+            m["obslugiwany"] = m["obszar"] == "tekst" if d == "anthropic" else True
     return kat
 
 
@@ -469,10 +473,48 @@ async def _schemat_openrouter(model_id: str) -> dict:
     raise RuntimeError("tego rodzaju modelu Studio jeszcze nie obsługuje")
 
 
+GLOSY_OPENAI = ["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse", "marin", "cedar"]
+GLOSY_TTS1 = ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"]
+
+
+def _schemat_openai_gemini(d: str, model_id: str) -> dict:
+    """ChatGPT: obraz (images/generations) i mowa (audio/speech); Gemini: obraz (images/generations, zgodny z OpenAI)."""
+    poz = next((m for m in (katalog(d) or {}).get("modele", []) if m["id"] == model_id), None)
+    if not poz:
+        raise RuntimeError("model spoza katalogu — odśwież listę")
+    prompt = {"id": "prompt", "typ": "prompt", "cel": ["prompt"], "wymagane": True}
+    domyslna = {"": _et("domyślna", "default", "par défaut")}
+    if poz["obszar"] == "obraz" and d == "openai":
+        rozm = ["1024x1024", "1792x1024", "1024x1792"] if "dall-e" in model_id else ["auto", "1024x1024", "1536x1024", "1024x1536"]
+        par = [prompt, {"id": "size", "typ": "wybor", "cel": ["size"], "opcje": rozm, "domyslnie": rozm[0],
+                        "etykieta": _et("rozmiar", "size", "taille")}]
+        if "gpt-image" in model_id:
+            par.append({"id": "quality", "typ": "wybor", "cel": ["quality"], "opcje": ["auto", "low", "medium", "high"],
+                        "domyslnie": "auto", "etykieta": _et("jakość", "quality", "qualité")})
+        stale = {"n": 1} | ({"response_format": "b64_json"} if "dall-e" in model_id else {})
+        return {"parametry": par, "wejscia": [], "endpoint": "images/generations", "cena": "", "stale": stale}
+    if poz["obszar"] == "obraz":                          # gemini
+        par = [prompt, {"id": "aspect_ratio", "typ": "wybor", "cel": ["aspect_ratio"], "pomin_puste": True,
+                        "opcje": ["", "1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9"], "domyslnie": "",
+                        "etykiety_opcji": domyslna, "etykieta": _et("proporcje", "aspect ratio", "proportions")}]
+        return {"parametry": par, "wejscia": [], "endpoint": "images/generations", "cena": "",
+                "stale": {"n": 1, "response_format": "b64_json"}}
+    if poz["obszar"] == "mowa" and d == "openai":
+        glosy = GLOSY_TTS1 if model_id.startswith("tts-1") else GLOSY_OPENAI
+        par = [{**prompt, "cel": ["input"]}, {"id": "voice", "typ": "wybor", "cel": ["voice"], "opcje": glosy, "domyslnie": "coral",
+                                               "etykieta": _et("głos", "voice", "voix")}]
+        if not model_id.startswith("tts-1"):
+            par.append({"id": "instructions", "typ": "tekst", "cel": ["instructions"], "pomin_puste": True,
+                        "etykieta": _et("jak mówić (ton, tempo)", "how to speak (tone, pace)", "comment parler (ton, rythme)")})
+        return {"parametry": par, "wejscia": [], "endpoint": "audio/speech", "cena": "", "stale": {"response_format": "mp3"}}
+    raise RuntimeError("tego rodzaju modelu Studio jeszcze nie obsługuje")
+
+
 async def pobierz_schemat(d: str, model_id: str) -> dict:
-    """Parametry modelu mediów → zapis obok katalogu. fal.ai: z OpenAPI endpointu + cena; OpenRouter: stały formularz."""
-    if d == "openrouter":
-        out = await _schemat_openrouter(model_id)
+    """Parametry modelu mediów → zapis obok katalogu. fal.ai: z OpenAPI endpointu + cena; OpenRouter, ChatGPT, Gemini:
+    stały formularz wg rodzaju modelu."""
+    if d in ("openrouter", "openai", "gemini"):
+        out = await _schemat_openrouter(model_id) if d == "openrouter" else _schemat_openai_gemini(d, model_id)
         SCHEMATY.mkdir(parents=True, exist_ok=True)
         _plik_schematu(d, model_id).write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
         return out

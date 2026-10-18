@@ -26,7 +26,9 @@ PROG_ZADANIA_S = float(BUDZET.get("prog_zadania_s", 600))      # zadanie lokalne
 CZAS_API_S = 180.0                                              # czas generacji w API, gdy brak historii
 DOSTAWCY = {"higgsfield": {"klucz_env": "HF_KEY", "rownolegle": 10, "nazwa": "HiggsField"},
             "fal": {"klucz_env": "FAL_KEY", "rownolegle": 10, "nazwa": "fal.ai"},
-            "openrouter": {"klucz_env": "OPENROUTER_API_KEY", "rownolegle": 6, "nazwa": "OpenRouter"}}
+            "openrouter": {"klucz_env": "OPENROUTER_API_KEY", "rownolegle": 6, "nazwa": "OpenRouter"},
+            "openai": {"klucz_env": "OPENAI_API_KEY", "rownolegle": 4, "nazwa": "OpenAI"},
+            "gemini": {"klucz_env": "GEMINI_API_KEY", "rownolegle": 4, "nazwa": "Google Gemini"}}
 DOSTAWCY.update(CFG.get("api") or {})
 
 TYPY_PLIKOW = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif",
@@ -306,7 +308,9 @@ class Fal(Higgsfield):
 class OpenRouter(Higgsfield):
     BASE = "https://openrouter.ai/api/v1"
 
-    def __init__(self, klucz: str):
+    def __init__(self, klucz: str, base: str | None = None):
+        if base:
+            self.BASE = base
         super().__init__(klucz)
         self.http.headers["Authorization"] = f"Bearer {klucz}"
         self._gotowe: dict[str, str] = {}             # wyniki zapytań synchronicznych (data URI) do odebrania w status()
@@ -341,7 +345,7 @@ class OpenRouter(Higgsfield):
         if endpoint == "videos":
             d = r.json()
             return {"request_id": d["id"], "status_url": d.get("polling_url") or f"{self.BASE}/videos/{d['id']}", "cancel_url": None}
-        if endpoint == "images":
+        if endpoint in ("images", "images/generations"):
             obraz = (r.json().get("data") or [{}])[0]
             if not obraz.get("b64_json"):
                 raise RuntimeError(K("e_api_brak_pliku"))
@@ -388,7 +392,12 @@ def klient(dostawca: str) -> Higgsfield:
         klucz = os.environ.get((d or {}).get("klucz_env", ""), "")
         if not klucz:
             raise RuntimeError(f"brak klucza API dostawcy {dostawca}")
-        _KLIENCI[dostawca] = {"fal": Fal, "openrouter": OpenRouter}.get(dostawca, Higgsfield)(klucz)
+        if dostawca == "openai":                       # obraz i mowa: ten sam kształt co OpenRouter
+            _KLIENCI[dostawca] = OpenRouter(klucz, "https://api.openai.com/v1")
+        elif dostawca == "gemini":                     # obraz przez endpoint zgodny z OpenAI
+            _KLIENCI[dostawca] = OpenRouter(klucz, "https://generativelanguage.googleapis.com/v1beta/openai")
+        else:
+            _KLIENCI[dostawca] = {"fal": Fal, "openrouter": OpenRouter}.get(dostawca, Higgsfield)(klucz)
     return _KLIENCI[dostawca]
 
 

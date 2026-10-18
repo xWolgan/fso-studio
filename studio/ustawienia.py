@@ -81,7 +81,7 @@ async def wybor(req: Request):
     d = _d(j.get("dostawca") or "")
     mid = str(j.get("id") or "")
     poz = next((m for m in (dostawcy.katalog(d) or {}).get("modele", []) if m["id"] == mid), None)
-    media = d == "fal" or (d == "openrouter" and poz and poz["obszar"] != "tekst")
+    media = d == "fal" or (d in ("openrouter", "openai", "gemini") and poz and poz["obszar"] != "tekst")
     if media and j.get("tak") and not dostawcy.schemat(d, mid):
         try:
             await dostawcy.pobierz_schemat(d, mid)          # parametry modelu → formularz w obszarze
