@@ -2,39 +2,36 @@
 
 *Polski: [README.md](README.md)*
 
-A browser-based Studio built for the workshop “AI Form Research Group” (Kraków, 2026). One place to work with generative
-models in six areas — **Text, Image, Video, Music, SFX, Speech** — with a job queue, gallery, notes, and a conversation
-partner (LLM) that helps you search for form, keeps the piece's “bible”, and writes prompts for specific models.
+A browser-based Studio for working with generative models in six areas — **Text, Image, Video, Music, SFX, Speech** —
+with a job queue, gallery, notes, and a conversation partner (LLM) that helps you search for form, keeps the piece's
+“bible” and writes prompts for specific models. Built for the workshop “AI Form Research Group” (Kraków, 2026).
 
-This repository contains **no keys, no models and no access to our machines**. You connect your own:
-- **your own computer with an NVIDIA GPU and ComfyUI** — local generation, free;
-- **your own API keys** — OpenRouter (conversation) and HiggsField (video: Kling, WAN, MiniMax H3);
-- or both. The Studio only shows the models your installation can actually run.
+This is the **single-user version for your own computer**. Models run **in the cloud, on your own API keys** — no GPU
+needed. The repository contains no keys and no access to anyone else's machines.
 
 Interface: Polish, English, French (switch in the header).
 
-## What's inside
+## Providers
 
-| Area | Local (ComfyUI) | Via API |
+You enter keys in the Studio (**Settings**), fetch the provider's model list and tick the models that should appear in
+the areas. You can change the selection at any time.
+
+| Provider | What it gives you in the Studio | Key |
 |---|---|---|
-| Text | — (optionally a local LLM as fallback) | OpenRouter (default: Qwen 3.8 Flash) |
-| Image | Z-Image Turbo, Qwen-Image 2.1 (+ Edit), Qwen-Image-Edit 2511, Ideogram 4 | — |
-| Video | MiniMax H3 (+ keyframes, references), FastH3 V2, LTX-2.3, LTX-2.5, WAN 2.2 | Kling 3.0, Kling 3.0 Omni, WAN 3.0 (HiggsField); MiniMax H3 as a fallback for the local one |
-| Music | ACE-Step 1.5 XL, MiniMax Music 3, YuE 2 (+ cover from a recording) | — |
-| SFX | Stable Audio 3 small-SFX (Woosh — separate service, not in this repo) | — |
-| Speech | OmniVoice: text-to-speech, voice design and cloning (Breeze TTS — separate service) | — |
+| **OpenRouter** | text (hundreds of models), image, video, speech | https://openrouter.ai/keys |
+| **fal.ai** | image, video, music, sound effects, speech (over a thousand models; forms are built automatically) | https://fal.ai/dashboard/keys |
+| **HiggsField** | video: Kling 3.0, Kling 3.0 Omni, WAN 3.0 | https://cloud.higgsfield.ai/api-keys |
+| **Kie.ai** | image, video, speech (Kling, Wan, Veo, Seedream, Hailuo, ElevenLabs…) | https://kie.ai/api-key |
+| **Claude** (Anthropic) | text | https://console.anthropic.com/settings/keys |
+| **ChatGPT** (OpenAI) | text, image, speech | https://platform.openai.com/api-keys |
+| **Gemini** (Google) | text, image | https://aistudio.google.com/apikey |
 
-Full list with files to download and licenses: **[MODELE.md](MODELE.md)**. Model licenses are their own — some are non-commercial.
-
-## Requirements
-
-- **Python 3.11+**
-- a browser
-- for local generation: **ComfyUI ≥ 0.39** (https://github.com/comfyanonymous/ComfyUI) on a machine with an NVIDIA GPU
-  (video: realistically 24–48 GB VRAM; image and audio less); for Speech (OmniVoice) — the **TTS-Audio-Suite** nodes
-- optional: `pdftotext` / `pdftoppm` (Poppler) — reading PDFs attached in the chat
+One key is enough to start — e.g. **OpenRouter** gives you text, image, video and speech. Models marked “support coming
+soon” in Settings are visible but not yet available (e.g. Lyria music, Gemini video and speech).
 
 ## Quick start
+
+You need **Python 3.11+** and a browser.
 
 ```bash
 git clone https://github.com/xWolgan/fso-studio.git
@@ -43,53 +40,55 @@ cd fso-studio
 ```
 Windows: double-click **`start.cmd`** (or `.\start.ps1` in PowerShell).
 
-The first run creates `config.yaml` and `sekrety.env` (“secrets.env”) from the examples and installs dependencies. Then:
+The first run installs dependencies and creates `config.yaml` and `sekrety.env` (“secrets.env”). Then:
 
-1. **Keys** — put them in `sekrety.env` (never committed):
-   - `OPENROUTER_API_KEY` — https://openrouter.ai/keys (conversation, mirror, promptmaker, “description → JSON”),
-   - `HF_KEY` — https://console.higgsfield.ai, format `key_id:secret` (video via API; paid).
-2. **Machines** — in `config.yaml` → `maszyny:` (“machines”) add your ComfyUI (address and the areas it serves). Without a GPU keep `maszyny: []`.
-3. **Model files** — download the ones you want into `ComfyUI/models/...` (list: `MODELE.md`). Hide models you don't have with `modele_wylaczone:`.
-4. Restart and open **http://127.0.0.1:8100**. The login is any name (no password) — it separates people's files and budgets.
+1. Open **http://127.0.0.1:8100/ustawienia** (Settings).
+2. Enter a provider key → **Save** (the Studio checks right away whether it works).
+3. **Fetch model list**, expand it and tick models — they appear in the matching areas.
+4. Optionally set a monthly **spending limit**.
 
-Area names in the config are Polish: `tekst` (text), `obraz` (image), `wideo` (video), `muzyka` (music), `sfx`, `mowa` (speech).
+There is no login — the Studio opens straight away.
 
-### API-only mode (no GPU)
-`OPENROUTER_API_KEY` (Text) and/or `HF_KEY` (Video via API) plus `maszyny: []` is enough. Areas without models are shown as “not set up”.
+## Spending
 
-### With your own ComfyUI
-```yaml
-maszyny:
-  - id: my-pc
-    nazwa: My computer
-    comfyui: http://127.0.0.1:8188
-    role: [obraz, muzyka, sfx, mowa]     # add "wideo" if your GPU can handle it
-modele_wylaczone: [ideogram-4]           # models whose weights you didn't download
-```
-Several machines = several entries; the Studio distributes jobs between them.
+Every cloud generation costs whatever the provider charges and is **billed to your account with that provider**.
+The bar at the top shows this month's spending; click it for today / month / total and the most expensive models.
+Amounts come from the providers (OpenRouter reports the cost of each request) or from the model's price list in the
+Studio; jobs for which the provider reports no price are listed separately — check them in its dashboard. When spending
+reaches the limit set in Settings, the Studio pauses paid generations (conversations keep working).
 
 ## Security — please read
 
-- **The Studio has no passwords.** The login is just a name. By default it listens only on `127.0.0.1` (this computer).
-  Share it only on a trusted network (`HOST=0.0.0.0 ./start.sh`) or through a VPN such as Tailscale — **never directly on the internet**,
-  or anyone could generate at your expense and read other people's files.
-- Keep keys only in `sekrety.env`. Users' conversations and files live in `zasoby/` (also outside git).
-- Text conversations are sent to the LLM provider (OpenRouter and onwards); API jobs — to HiggsField.
+- **The Studio has no passwords.** By default it listens only on `127.0.0.1` — this computer only. Don't expose it to a
+  network (`HOST=0.0.0.0`) or the internet: anyone who got in could generate at your expense and read your files.
+- **Settings** (keys, limit) work only from this computer, even if the Studio is shared on a network. Keys are never
+  sent back to the browser.
+- Keys live in `sekrety.env`; your files, conversations and model selection in `zasoby/`. Both stay out of git.
+- Conversation and prompt content goes to the provider whose model you choose. In conversations via OpenRouter the Studio uses only
+  providers that don't collect request data (for image, video and speech the model provider's terms apply).
 
-## Budget (API only)
-API generations use a budget counted in “seconds” (`budzet` in `config.yaml`): 1000 s per person by default,
-1 s = 0.042 USD. Local generation is unlimited. When a local job would take longer than `prog_zadania_s`, the Studio offers a paid model.
-Prices in `modele/wideo/*.yaml` (`cena`) are from October 2026 (with a promotional discount) — check current HiggsField pricing.
+## Optional: local models (ComfyUI)
 
-## Your own models
-A model = a YAML file in `modele/<area>/` + a ComfyUI workflow in API format in `workflows/` (in ComfyUI: *Workflow → Export (API)*).
-See the example in [README.md](README.md#własne-modele) and the existing files in `modele/`. A selector `"@<node id>.<input>"`
-targets one node in the workflow; `"<Class>.<input>"` targets all nodes of that class.
+Have an NVIDIA GPU and ComfyUI (≥ 0.39)? The Studio can also generate locally, for free — image (Z-Image Turbo,
+Qwen-Image, Ideogram 4), video (MiniMax H3, LTX-2, WAN 2.2), music (ACE-Step, MiniMax Music 3, YuE 2), speech (OmniVoice).
+Add a machine in `config.yaml`:
+```yaml
+maszyny:                                  # "machines"
+  - id: my-pc
+    comfyui: http://127.0.0.1:8188
+    role: [obraz, muzyka, sfx, mowa]      # image, music, sfx, speech; add "wideo" (video) if your GPU can handle it
+modele_wylaczone: [ideogram-4]            # models whose weights you didn't download
+```
+Model files to download and licenses: **[MODELE.md](MODELE.md)** (some models are non-commercial).
+A custom local model = a YAML file in `modele/<area>/` + a ComfyUI workflow in API format in `workflows/`
+(in ComfyUI: *Workflow → Export (API)*); see the existing files for examples.
 
 ## Notes
-- Times in descriptions and guides were measured on an **NVIDIA DGX Spark** (“Spark” in the texts) and an RTX PRO 5000 48 GB.
-- The conversation partner (prompts in `prompty/`) is set up pedagogically: it asks questions rather than handing out solutions.
-  You can change that in the Studio (Text → system prompt preview and your own copies) or in the files.
-- Big-screen board: **/tablica** (machines, queue, recent results — without prompt contents).
 
-License: MIT (code and texts). AI models — their own licenses.
+- The conversation partner (prompts in `prompty/`) is set up pedagogically: it asks questions rather than handing out
+  solutions. You can change that in the Studio (Text → system prompt preview and your own copies) or in the files.
+- The Kie.ai catalog is collected from its documentation (Kie.ai has no catalog API). When new models appear:
+  `python narzedzia/kie_katalog.py`.
+- Optional: `pdftotext` / `pdftoppm` (Poppler) — reading PDFs attached in the chat.
+
+License: MIT (code and texts). AI models and provider services — their own licenses and terms.

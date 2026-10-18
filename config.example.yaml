@@ -1,46 +1,24 @@
-# Ustawienia Studia. Skopiuj jako config.yaml (start.sh / start.ps1 robi to przy pierwszym uruchomieniu) i dopasuj.
-# Klucze API NIE wpisuj tutaj — tylko do sekrety.env.
+# Ustawienia Studia. start.sh / start.cmd kopiuje ten plik jako config.yaml przy pierwszym uruchomieniu.
+# Klucze API i wybór modeli ustawiasz w przeglądarce: Studio → Ustawienia (http://127.0.0.1:8100/ustawienia).
+# Tu są tylko rzeczy rzadko zmieniane.
 
 nazwa_studia: "Studio"            # tytuł w nagłówku; może być też {pl: "...", en: "...", fr: "..."}
 
-zasoby: ./zasoby                  # pliki użytkowników: wyniki, wgrane pliki, notatki, rozmowy (prywatne)
-baza: ./zasoby/studio.db          # baza zadań i budżetów (SQLite)
+zasoby: ./zasoby                  # Twoje pliki: wyniki, wgrane pliki, notatki, rozmowy, ustawienia
+baza: ./zasoby/studio.db          # baza zadań i wydatków (SQLite)
 
-# --- Generowanie lokalne: maszyny z ComfyUI ---------------------------------------------------------------------
-# Bez karty graficznej zostaw pustą listę — Studio pokaże wtedy tylko modele przez API.
-# Studio pokazuje model tylko wtedy, gdy któraś maszyna ma jego obszar w „role” (i potrzebne pliki modeli są w ComfyUI —
-# tego Studio nie sprawdza; listę plików znajdziesz w MODELE.md).
+uzytkownik: ja                    # jeden użytkownik, bez logowania. Pusty ("") = logowanie po imieniu (praca w grupie)
+
+searx_url: ""                     # opcjonalnie: SearXNG do wyszukiwania w sieci w rozmowach (np. http://127.0.0.1:8888)
+
+# --- Opcjonalnie: generowanie na własnej karcie graficznej (ComfyUI) ----------------------------------------------
+# Studio działa w pełni bez tego (modele w chmurze). Gdy masz ComfyUI, dopisz maszynę — Studio pokaże wtedy także
+# modele lokalne z modele/*/*.yaml (pliki do pobrania: MODELE.md).
 maszyny: []
 #  - id: moj-pc
-#    nazwa: Mój komputer                     # na tablicy (/tablica)
-#    opis: RTX 4090 24 GB
+#    nazwa: Mój komputer
 #    comfyui: http://127.0.0.1:8188
 #    role: [obraz, muzyka, sfx, mowa]        # obszary, które ta maszyna obsługuje: obraz, wideo, muzyka, sfx, mowa
-#    # modele: [z-image-turbo, qwen-image-2-1]   # opcjonalnie: tylko te modele na tej maszynie
-#    # mnoznik_czasu: 1.0                    # szybkość względem maszyny, na której mierzyliśmy czasy (mniej = szybciej)
-#    # uslugi: {woosh: http://..., breeze: http://...}   # zaawansowane: usługi HTTP poza ComfyUI (nie ma ich w repo)
-
-# Modele do ukrycia, mimo że pasują do maszyn (id z plików modele/*/*.yaml), np. gdy nie masz ich wag:
-modele_wylaczone: []
-
-# --- Tekst: model językowy (rozmowa, lustro, promptmaker) ------------------------------------------------------------
-# Najpierw API zgodne z OpenAI (klucz w sekrety.env), a gdy go brak albo nie odpowiada — lokalny LLM z llm_url.
-llm_api:
-  url: https://openrouter.ai/api/v1
-  klucz_env: OPENROUTER_API_KEY
-  model: qwen/qwen3.8-flash              # dowolny model z openrouter.ai/models; dobrze, gdy rozumie obrazy
-  # dostawcy: [Alibaba]                  # opcjonalnie: tylko ci dostawcy w OpenRouter
-llm_url: http://127.0.0.1:9292/v1        # lokalny zapasowy LLM (np. llama-swap, Ollama: http://127.0.0.1:11434/v1);
-                                         # nazwa modelu: modele/tekst/qwen-czat.yaml → stale.llm_model
-searx_url: ""                            # SearXNG do wyszukiwania w sieci (np. http://127.0.0.1:8888); pusty = wyłączone
-
-# --- Generowanie przez API (płatne) -----------------------------------------------------------------------------------
-api:
-  higgsfield: {klucz_env: HF_KEY, rownolegle: 10, nazwa: HiggsField}
-
-budzet:                       # dotyczy tylko generacji przez API; lokalne są bez limitu
-  sekund: 1000                # budżet na osobę, w „sekundach” (1 s = usd_za_sekunde dolarów)
-  usd_za_sekunde: 0.042
-  prog_zadania_s: 600         # zadanie lokalne dłuższe niż to → Studio proponuje model płatny
-  osoby: {}                   # wyjątki: {login: sekund}
-  # nowe_konta: {miejsc: 2, sekund: 1000}   # zamyka logowanie po tylu nowych loginach
+#    # modele: [z-image-turbo]               # opcjonalnie: tylko te modele na tej maszynie
+modele_wylaczone: []                         # modele lokalne do ukrycia (id z modele/*/*.yaml), np. gdy nie masz ich wag
+# llm_url: http://127.0.0.1:11434/v1         # opcjonalnie: lokalny LLM (np. Ollama) jako ostatni zapas dla rozmów
