@@ -26,6 +26,7 @@ DOSTAWCY = {
     "openrouter": {"nazwa": "OpenRouter", "klucz_env": "OPENROUTER_API_KEY", "klucz_url": "https://openrouter.ai/keys",
                    "chat": "https://openrouter.ai/api/v1"},
     "fal": {"nazwa": "fal.ai", "klucz_env": "FAL_KEY", "klucz_url": "https://fal.ai/dashboard/keys"},
+    "kling": {"nazwa": "Kling AI", "klucz_env": "KLING_API_KEY", "klucz_url": "https://kling.ai/dev/api-key"},
     "higgsfield": {"nazwa": "HiggsField", "klucz_env": "HF_KEY", "klucz_url": "https://cloud.higgsfield.ai/api-keys",
                    "format": "key_id:secret"},
     "kie": {"nazwa": "Kie.ai", "klucz_env": "KIE_API_KEY", "klucz_url": "https://kie.ai/api-key"},
@@ -80,6 +81,8 @@ def naglowki(d: str) -> dict:
         return {}
     if d == "fal" or d == "higgsfield":
         return {"Authorization": f"Key {k}"}
+    if d == "kling":
+        return {"Authorization": f"Bearer {k}", "Content-Type": "application/json"}
     if d == "anthropic":
         return {"x-api-key": k, "anthropic-version": "2023-06-01"}
     if d == "gemini":
@@ -96,6 +99,21 @@ async def sprawdz(d: str) -> tuple[bool, str]:
     """(działa?, krótki opis) — najtańsze zapytanie, które wymaga ważnego klucza."""
     if not klucz(d):
         return False, "brak adresu" if d == "lokalne" else "brak klucza"
+    if d == "kling":
+        teraz = int(time.time() * 1000)
+        try:
+            async with httpx.AsyncClient(timeout=TIMEOUT) as c:
+                r = await c.get("https://api-singapore.klingai.com/account/costs", headers=naglowki(d),
+                                params={"start_time": teraz - 30 * 86400000, "end_time": teraz})
+        except httpx.HTTPError as e:
+            return False, f"brak połączenia ({type(e).__name__})"
+        if r.status_code == 401:
+            return False, "klucz odrzucony"
+        if r.status_code != 200:
+            return False, f"odpowiedź {r.status_code}"
+        pakiety = ((r.json().get("data") or {}).get("resource_pack_subscribe_infos") or [])
+        zostalo = sum(float(p.get("remaining_quantity") or 0) for p in pakiety if p.get("status") == "online")
+        return True, "działa" + (f" · w pakietach zostało {zostalo:g} jednostek" if pakiety else "")
     if d == "lokalne":
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(10, connect=5)) as c:
@@ -282,6 +300,62 @@ async def _lokalne(c) -> list:
             for m in r.json().get("data", []) if not re.search(r"embed", m["id"], re.I)]
 
 
+# Kling AI: API nie ma listy modeli — opis tutaj (dokumentacja kling.ai/document-api, październik 2026).
+# Cena: jednostki/s × 0,14 USD (cennik Kling, 1080p / 720p; z dźwiękiem drożej).
+def _et(pl, en, fr=None):
+    return {"pl": pl, "en": en, "fr": fr or en}
+
+
+KLING_JEDNOSTKA_USD = 0.14
+
+
+def _kling_katalog() -> list:
+    prompt = {"id": "prompt", "typ": "prompt", "cel": ["prompt"], "wymagane": True}
+    proporcje = {"id": "aspect_ratio", "typ": "wybor", "cel": ["aspect_ratio"], "opcje": ["16:9", "9:16", "1:1"], "domyslnie": "16:9",
+                 "etykieta": _et("proporcje", "aspect ratio", "proportions")}
+    rozdz = lambda opcje, dom: {"id": "resolution", "typ": "wybor", "cel": ["resolution"], "opcje": opcje, "domyslnie": dom,
+                                "etykieta": _et("rozdzielczość", "resolution", "résolution")}
+    dlugosc = lambda opcje, dom: {"id": "duration", "typ": "wybor", "cel": ["duration"], "opcje": [str(x) for x in opcje],
+                                  "domyslnie": str(dom), "wartosc_typ": "int", "etykieta": _et("długość (s)", "length (s)", "durée (s)")}
+    dzwiek = lambda opcje: {"id": "audio", "typ": "wybor", "cel": ["audio"], "opcje": opcje, "domyslnie": opcje[0],
+                            "etykieta": _et("dźwięk", "sound", "son"),
+                            "etykiety_opcji": {"native": _et("generowany", "generated", "généré"), "off": _et("bez dźwięku", "silent", "muet"),
+                                               "original": _et("z wideo wejściowego", "from input video", "de la vidéo d'entrée")}}
+    klatki = [{"id": "first_frame", "typ": "obraz", "cel": "first_frame", "etykieta": _et("pierwsza klatka", "first frame", "première image")},
+              {"id": "last_frame", "typ": "obraz", "cel": "last_frame", "wymaga": ["first_frame"],
+               "etykieta": _et("ostatnia klatka", "last frame", "dernière image")}]
+
+    def poz(id_, nazwa, obszar, opis, parametry, wejscia, endpoint, cena=None, **x):
+        return _poz(id_, nazwa, obszar, opis, obslugiwany=True, parametry=parametry, wejscia=wejscia, endpoint=endpoint,
+                    cena_tab=cena, **x)
+
+    return [
+        poz("kling-3.0", "Kling 3.0", "wideo", "Tekst → wideo albo obraz → wideo (pierwsza i ostatnia klatka), 3–15 s, do 4K, z dźwiękiem.",
+            [prompt, dlugosc(range(3, 16), 5), rozdz(["720p", "1080p", "4k"], "1080p"), proporcje, dzwiek(["native", "off"])], klatki,
+            "kling-3.0", {"wg": ["resolution", "audio"], "usd_s": {"720p|native": 0.9, "720p|off": 0.6, "1080p|native": 1.2,
+                                                                    "1080p|off": 0.8, "4k|native": 3.0, "4k|off": 3.0}}),
+        poz("kling-3.0-omni", "Kling 3.0 Omni", "wideo", "Wideo z obrazów referencyjnych (w prompcie: @image_1, @image_2…), 3–15 s.",
+            [prompt, dlugosc(range(3, 16), 5), rozdz(["720p", "1080p", "4k"], "1080p"), proporcje, dzwiek(["native", "off"])],
+            [{"id": "refer_image", "typ": "obraz", "cel": "refer_image", "wiele": 7, "znacznik": "@image_{n}",
+              "etykieta": _et("obrazy referencyjne", "reference images", "images de référence")}] + klatki,
+            "omni:kling-3.0-omni", {"wg": ["resolution", "audio"], "usd_s": {"720p|native": 0.8, "720p|off": 0.6, "1080p|native": 1.0,
+                                                                             "1080p|off": 0.8, "4k|native": 3.0, "4k|off": 3.0}}),
+        poz("kling-2.6", "Kling 2.6", "wideo", "Tańszy: tekst → wideo albo obraz → wideo, 5 lub 10 s (dźwięk tylko w 1080p).",
+            [prompt, dlugosc([5, 10], 5), rozdz(["720p", "1080p"], "1080p"), proporcje, dzwiek(["off", "native"])], klatki[:1],
+            "kling-2.6", {"wg": ["resolution", "audio"], "usd_s": {"720p|off": 0.3, "1080p|off": 0.5, "1080p|native": 1.0, "720p|native": 1.0}}),
+        poz("kling-v3-obraz", "Kling v3 (obraz)", "obraz", "Obraz z tekstu albo na podstawie obrazu (postać, twarz).",
+            [prompt, {**proporcje, "opcje": ["16:9", "9:16", "1:1", "4:3", "3:4", "3:2", "2:3", "21:9"]},
+             {"id": "resolution", "typ": "wybor", "cel": ["resolution"], "opcje": ["1k", "2k"], "domyslnie": "1k",
+              "etykieta": _et("rozdzielczość", "resolution", "résolution")}],
+            [{"id": "image", "typ": "obraz", "cel": "image", "etykieta": _et("obraz wejściowy", "input image", "image d'entrée")}],
+            "v1:images/generations", None, model_name="kling-v3"),
+        poz("kling-text-to-audio", "Kling — efekty dźwiękowe", "sfx", "Dźwięk z opisu (do 200 znaków), 3–10 s.",
+            [{**prompt, "cel": ["prompt"]}, {"id": "duration", "typ": "ulamek", "cel": ["duration"], "min": 3, "max": 10, "krok": 0.5,
+                                            "domyslnie": 5, "etykieta": _et("długość (s)", "length (s)", "durée (s)")}],
+            [], "v1:audio/text-to-audio"),
+    ]
+
+
 def _z_repo(dostawca: str) -> list:
     """HiggsField / Kie.ai: modele opisane w repo (modele/*/*.yaml z `dostawca:`) — te Studio już umie uruchomić."""
     out = []
@@ -305,7 +379,9 @@ def _kie() -> list:
 
 
 async def pobierz_katalog(d: str) -> list:
-    if d == "kie":
+    if d == "kling":
+        kat = _kling_katalog()
+    elif d == "kie":
         kat = _kie()
     elif d == "higgsfield":
         kat = _z_repo(d)
@@ -321,8 +397,8 @@ async def pobierz_katalog(d: str) -> list:
 
 def katalog(d: str) -> dict | None:
     p = KATALOGI / f"{d}.json"
-    if d in ("higgsfield", "kie"):            # opisy z repo — zawsze aktualne
-        return {"czas": time.time(), "modele": _z_repo(d) if d == "higgsfield" else _kie()}
+    if d in ("higgsfield", "kie", "kling"):   # opisy z repo / z kodu — zawsze aktualne
+        return {"czas": time.time(), "modele": {"higgsfield": _z_repo, "kie": lambda _: _kie(), "kling": lambda _: _kling_katalog()}[d](d)}
     try:
         kat = json.loads(p.read_text(encoding="utf-8"))
     except Exception:

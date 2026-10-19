@@ -145,6 +145,17 @@ def odswiez_chmure():
         if poz.get("z_repo"):
             continue                                   # HiggsField / Kie.ai: modele z YAML, już w MODELS
         mid = dostawcy.id_studia(d, poz["id"])
+        if d == "kling":                               # opis modeli w kodzie (dostawcy._kling_katalog)
+            from .dostawcy import KLING_JEDNOSTKA_USD
+            c = poz.get("cena_tab")
+            cena = {"wg": c["wg"], "usd_s": {k: round(v * KLING_JEDNOSTKA_USD, 4) for k, v in c["usd_s"].items()}} if c else {}
+            stale = {"chmura": True, "api_model": poz["id"], **({"model_name": poz["model_name"]} if poz.get("model_name") else {})}
+            MODELS[mid] = Model(id=mid, nazwa=poz["nazwa"], obszar=poz["obszar"], backend="api", workflow=None, wyjscie=poz["obszar"],
+                                opis={"pl": poz.get("opis") or "", "en": poz.get("opis") or ""},
+                                licencja={"pl": "API Kling AI — warunki dostawcy", "en": "Kling AI API — provider terms"},
+                                wejscia=poz["wejscia"], parametry=poz["parametry"], kolejnosc=40 + i, dostawca="kling",
+                                endpointy=[{"endpoint": poz["endpoint"]}], cena=cena, stale=stale)
+            continue
         if d == "kie":                                 # pola formularza są w katalogu (z dokumentacji Kie.ai)
             opis = (poz.get("opis") or "").strip()
             MODELS[mid] = Model(id=mid, nazwa=poz["nazwa"], obszar=poz["obszar"], backend="api", workflow=None,

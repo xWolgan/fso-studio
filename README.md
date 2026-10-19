@@ -21,6 +21,7 @@ w obszarach. Wybór możesz zmieniać w każdej chwili.
 | **OpenRouter** | tekst (setki modeli), obraz, wideo, mowa | https://openrouter.ai/keys |
 | **fal.ai** | obraz, wideo, muzyka, efekty dźwiękowe, mowa (ponad tysiąc modeli; formularze budują się same) | https://fal.ai/dashboard/keys |
 | **HiggsField** | wideo: Kling 3.0, Kling 3.0 Omni, WAN 3.0 | https://cloud.higgsfield.ai/api-keys |
+| **Kling AI** | wideo (Kling 3.0, 3.0 Omni, 2.6), obraz, efekty dźwiękowe — bezpośrednio u Klinga | https://kling.ai/dev/api-key |
 | **Kie.ai** | obraz, wideo, mowa (Kling, Wan, Veo, Seedream, Hailuo, ElevenLabs…) | https://kie.ai/api-key |
 | **Claude** (Anthropic) | tekst | https://console.anthropic.com/settings/keys |
 | **ChatGPT** (OpenAI) | tekst, obraz, mowa | https://platform.openai.com/api-keys |

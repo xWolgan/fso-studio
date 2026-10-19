@@ -21,6 +21,7 @@ the areas. You can change the selection at any time.
 | **OpenRouter** | text (hundreds of models), image, video, speech | https://openrouter.ai/keys |
 | **fal.ai** | image, video, music, sound effects, speech (over a thousand models; forms are built automatically) | https://fal.ai/dashboard/keys |
 | **HiggsField** | video: Kling 3.0, Kling 3.0 Omni, WAN 3.0 | https://cloud.higgsfield.ai/api-keys |
+| **Kling AI** | video (Kling 3.0, 3.0 Omni, 2.6), image, sound effects — directly from Kling | https://kling.ai/dev/api-key |
 | **Kie.ai** | image, video, speech (Kling, Wan, Veo, Seedream, Hailuo, ElevenLabs…) | https://kie.ai/api-key |
 | **Claude** (Anthropic) | text | https://console.anthropic.com/settings/keys |
 | **ChatGPT** (OpenAI) | text, image, speech | https://platform.openai.com/api-keys |

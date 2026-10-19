@@ -30,7 +30,8 @@ DOSTAWCY = {"higgsfield": {"klucz_env": "HF_KEY", "rownolegle": 10, "nazwa": "Hi
             "openrouter": {"klucz_env": "OPENROUTER_API_KEY", "rownolegle": 6, "nazwa": "OpenRouter"},
             "openai": {"klucz_env": "OPENAI_API_KEY", "rownolegle": 4, "nazwa": "OpenAI"},
             "gemini": {"klucz_env": "GEMINI_API_KEY", "rownolegle": 4, "nazwa": "Google Gemini"},
-            "kie": {"klucz_env": "KIE_API_KEY", "rownolegle": 10, "nazwa": "Kie.ai"}}
+            "kie": {"klucz_env": "KIE_API_KEY", "rownolegle": 10, "nazwa": "Kie.ai"},
+            "kling": {"klucz_env": "KLING_API_KEY", "rownolegle": 3, "nazwa": "Kling AI"}}
 DOSTAWCY.update(CFG.get("api") or {})
 
 TYPY_PLIKOW = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif",
@@ -67,8 +68,12 @@ def _wartosc(model, values: dict, pid: str):
 def dlugosc(model, values: dict) -> int:
     """Długość wyniku w sekundach — tak, jak pójdzie do API (zaokrąglona i przycięta do zakresu modelu)."""
     p = next((x for x in model.parametry if x["typ"] == "dlugosc"), None)
-    if not p:
-        return 5
+    if not p:                                          # np. Kling: długość jako lista wyboru „duration”
+        q = next((x for x in model.parametry if x["id"] == "duration"), None)
+        try:
+            return int(round(float(values.get("duration", q.get("domyslnie") if q else 5))))
+        except (TypeError, ValueError):
+            return 5
     try:
         s = float(values.get(p["id"], p.get("domyslnie", 5)))
     except (TypeError, ValueError):
@@ -449,6 +454,89 @@ class Kie(Higgsfield):
         return False
 
 
+# --- Kling AI: nowy format (contents + settings), GET /tasks; obraz i dźwięk — starszy /v1/... ---
+
+class Kling(Higgsfield):
+    BASE = "https://api-singapore.klingai.com"
+    TRESCI = ("first_frame", "last_frame", "refer_image", "feature_video", "image", "video")
+
+    def __init__(self, klucz: str):
+        super().__init__(klucz)
+        self.http.headers["Authorization"] = f"Bearer {klucz}"
+
+    @staticmethod
+    def _blad_kling(r: httpx.Response) -> str:
+        try:
+            d = r.json()
+            return f"{d.get('code')}: {d.get('message')}"
+        except Exception:
+            return r.text[:300]
+
+    async def upload(self, path: Path) -> str:
+        """Obrazy: base64 (Kling przyjmuje). Wideo wejściowe Kling przyjmuje tylko jako adres URL — tego Studio nie ma."""
+        import base64
+        if path.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
+            raise ValueError(K("e_api_typ", t=path.suffix, n=path.name))
+        return base64.b64encode(path.read_bytes()).decode()
+
+    async def submit(self, endpoint: str, args: dict, idem: str) -> dict:
+        args = dict(args)
+        if endpoint.startswith("v1:"):                  # starszy format: płaskie pola, model_name w treści
+            sciezka = "/v1/" + endpoint[3:]
+            body = args
+        else:
+            omni = endpoint.startswith("omni:")
+            model = endpoint.split(":", 1)[-1]
+            contents = [{"type": "prompt", "text": args.pop("prompt", "")}]
+            for typ in self.TRESCI:
+                v = args.pop(typ, None)
+                for u in (v if isinstance(v, list) else [v] if v else []):
+                    contents.append({"type": typ, "url": u})
+            if omni:
+                sciezka = f"/omni-video/{model}"
+            else:
+                sciezka = f"/{'image' if any(c['type'] == 'first_frame' for c in contents) else 'text'}-to-video/{model}"
+            body = {"contents": contents, "settings": args}
+        r = await self.http.post(sciezka, json=body)
+        if r.status_code >= 300:
+            if r.status_code == 401:
+                raise RuntimeError(K("e_api_dostep"))
+            if r.status_code == 429 and '"code":110' in r.text.replace(" ", ""):
+                raise RuntimeError(K("e_api_srodki"))
+            if '"code":1301' in r.text.replace(" ", ""):
+                raise RuntimeError(K("e_moderacja"))
+            raise RuntimeError(K("e_api_odrzucilo", m=f"{r.status_code}: {self._blad_kling(r)}"))
+        d = r.json().get("data") or {}
+        tid = d.get("id") or d.get("task_id")
+        stat = f"{self.BASE}{sciezka}/{tid}" if endpoint.startswith("v1:") else f"{self.BASE}/tasks?task_ids={tid}"
+        return {"request_id": tid, "status_url": stat, "cancel_url": None}
+
+    async def status(self, status_url: str) -> dict:
+        d = await super().status(status_url)
+        dane = d.get("data")
+        if isinstance(dane, list):                     # nowy format: /tasks?task_ids=
+            t = dane[0] if dane else {}
+            st = t.get("status")
+            wyniki = [o for o in (t.get("outputs") or []) if o.get("url")]
+            koszt = None
+        else:                                          # starszy: /v1/.../{id}
+            t = dane or {}
+            st = t.get("task_status")
+            res = t.get("task_result") or {}
+            wyniki = [{"url": x.get("url") or x.get("url_mp3") or x.get("url_wav")} for k in ("videos", "images", "audios")
+                      for x in (res.get(k) or [])]
+        if st in ("submitted",):
+            return {"status": "queued"}
+        if st in ("processing",):
+            return {"status": "in_progress"}
+        if st in ("succeeded", "succeed"):
+            return {"status": "completed", "wynik_url": wyniki[0]["url"] if wyniki else None}
+        return {"status": "failed", "error": t.get("message") or t.get("task_status_msg") or st}
+
+    async def cancel(self, cancel_url) -> bool:
+        return False
+
+
 _KLIENCI: dict[str, Higgsfield] = {}
 
 
@@ -463,7 +551,7 @@ def klient(dostawca: str) -> Higgsfield:
         elif dostawca == "gemini":                     # obraz przez endpoint zgodny z OpenAI
             _KLIENCI[dostawca] = OpenRouter(klucz, "https://generativelanguage.googleapis.com/v1beta/openai")
         else:
-            _KLIENCI[dostawca] = {"fal": Fal, "openrouter": OpenRouter, "kie": Kie}.get(dostawca, Higgsfield)(klucz)
+            _KLIENCI[dostawca] = {"fal": Fal, "openrouter": OpenRouter, "kie": Kie, "kling": Kling}.get(dostawca, Higgsfield)(klucz)
     return _KLIENCI[dostawca]
 
 
