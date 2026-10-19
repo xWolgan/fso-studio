@@ -154,7 +154,9 @@ const notatki = (() => {
     if (cel.id === "prompt") t = jsonZTekstu(t) ?? czystyPrompt(t);     // edytor notatek psuje JSON znakami „\”
     const a = cel.selectionStart ?? cel.value.length, b = cel.selectionEnd ?? a;
     cel.value = cel.value.slice(0, a) + t + cel.value.slice(b);
-    cel.dispatchEvent(new Event("input")); cel.focus();
+    cel.dispatchEvent(new Event("input"));
+    if (cel.id === "prompt") { zamknij().then(() => { cel.focus(); blysk(cel); }); toast(T.wstaw_do_promptu); return; }
+    cel.focus(); blysk(cel);
     toast(T.wstaw_do_promptu);
   }
 

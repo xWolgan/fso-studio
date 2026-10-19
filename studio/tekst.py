@@ -91,6 +91,9 @@ S = {
     "biblia": {"pl": "## Biblia utworu — aktualna treść pliku `{p}`\n\n{t}\n\n(Koniec biblii. Zapis do niej: narzędzie `zapisz_sekcje` z tą ścieżką.)",
                "en": "## Piece bible — current content of the file `{p}`\n\n{t}\n\n(End of the bible. To write to it: the `zapisz_sekcje` tool with this path.)",
                "fr": "## Bible de l’œuvre — contenu actuel du fichier `{p}`\n\n{t}\n\n(Fin de la bible. Pour y écrire : l’outil `zapisz_sekcje` avec ce chemin.)"},
+    "scenopis": {"pl": "## Scenopis utworu — aktualna treść pliku `{p}`\n\n{t}\n\n(Koniec scenopisu. W promptmakingu: zapytaj, którego ujęcia dotyczy prompt, i weź jego opis ze scenopisu.)",
+                 "en": "## Shot list of the piece — current content of the file `{p}`\n\n{t}\n\n(End of the shot list. In promptmaking: ask which shot the prompt is for and take its description from the shot list.)",
+                 "fr": "## Découpage de l’œuvre — contenu actuel du fichier `{p}`\n\n{t}\n\n(Fin du découpage. En promptmaking : demande de quel plan il s’agit et prends sa description dans le découpage.)"},
     "temat": {"pl": "Temat tej rozmowy: **{n}**. Zapisy z tej rozmowy idą do biblii pod nagłówkiem `## {n}` (chyba że uczestnik wskaże inny).",
               "en": "Topic of this conversation: **{n}**. What you save from this conversation goes into the bible under the heading `## {n}` (unless the participant names another).",
               "fr": "Thème de cette conversation : **{n}**. Ce que tu enregistres ici va dans la bible sous le titre `## {n}` (sauf si le participant en indique un autre)."},
@@ -187,6 +190,10 @@ def prompt_systemowy(login: str, r: dict) -> str:
         p = prompty.plik_biblii(login, r.get("biblia") or "")
         if p:                                         # czytana przy każdej wiadomości — widać też świeże zapisy
             czesci.append(tx("biblia", jez, p=r["biblia"], t=p.read_text(encoding="utf-8", errors="replace")[:20000]))
+            sc = p.with_name(p.name.replace("-biblia.md", "-scenopis.md")) if p.name.endswith("-biblia.md") else None
+            if sc and sc.exists():                    # scenopis (osobna notatka obok biblii) — też przy każdej wiadomości
+                czesci.append(tx("scenopis", jez, p=r["biblia"].replace("-biblia.md", "-scenopis.md"),
+                                 t=sc.read_text(encoding="utf-8", errors="replace")[:15000]))
         if r.get("temat"):
             czesci.append(tx("temat", jez, n=r.get("temat_nazwa") or r["temat"]))
     czesci.append(prompty.tresc(login, "zasady", None, jez))  # twarde zasady na samym końcu — model trzyma się ich najsilniej
@@ -573,7 +580,8 @@ async def wyslij(req: Request, rid: str):
                             info = narzedzia.opis(w["name"], args, jez)
                             uzyte.append(info)
                             yield "data: " + json.dumps({"n": info}, ensure_ascii=False) + "\n\n"
-                            wynik = await narzedzia.wykonaj(u, w["name"], args, jez)
+                            wynik = await narzedzia.wykonaj(u, w["name"], args, jez,
+                                                            {"model": r.get("model_docelowy"), "biblia": r.get("biblia")})
                         if w["name"] in ZAPISUJACE and narzedzia.udany_zapis(wynik):
                             zapisano_cos = True
                         if w["name"] == "zapisz_prompt" and narzedzia.udany_zapis(wynik):
@@ -638,6 +646,32 @@ def _art_public(a: dict) -> dict:
 async def art_lista(req: Request, kto: str = "ja"):
     u = _need(req)
     return [_art_public(a) for a in store.list_assets(u, kto, "tekst", None, None, False, "")]
+
+
+@router.get("/api/prompty-obszaru")
+async def prompty_obszaru(req: Request, obszar: str, model: str = ""):
+    """Zapisane prompty tylko dla tego obszaru (artefakty/prompty/<obszar>/): najpierw dla wybranego modelu, potem najnowsze."""
+    u = _need(req)
+    out = []
+    for a in store.list_assets(u, "ja", "tekst", None, None, False, ""):
+        if _art_public(a)["folder"] != f"prompty/{obszar}":
+            continue
+        try:
+            meta = json.loads(a.get("meta") or "{}")
+        except ValueError:
+            meta = {}
+        try:
+            t = (store.ZASOBY / a["sciezka"]).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        podglad = re.sub(r"^```\w*\n|\n```\s*$", "", t.strip())[:220]
+        m = meta.get("model")
+        out.append({"id": a["id"], "nazwa": re.sub(r"\.md$", "", a["nazwa"]), "utworzone": a["utworzone"], "model": m,
+                    "model_nazwa": (MODELS[m].nazwa_w(jezyk_rozmowy({"jezyk": prompty.jezyk(req)})) if m in MODELS else None),
+                    "ten_model": bool(model and m == model), "biblia": (meta.get("biblia") or "").rsplit("/", 1)[-1].replace("-biblia.md", "") or None,
+                    "jednostka": meta.get("jednostka"), "podglad": podglad})
+    out.sort(key=lambda x: (not x["ten_model"], -x["utworzone"]))
+    return out
 
 
 @router.get("/api/artefakty/{aid}")

@@ -44,6 +44,7 @@ SPEC = [
         "description": "Zapisuje gotowy prompt do generacji w artefakty/prompty/<obszar>/ — uczestnik weźmie go z notatek w obszarze generacji. Tylko po zgodzie uczestnika. Treść = sam prompt (bez komentarzy, bez listy źródeł).",
         "parameters": {"type": "object", "properties": {"obszar": {"type": "string", "enum": ["obraz", "wideo", "sfx", "muzyka", "mowa"]},
                                                        "nazwa": {"type": "string", "description": "krótka nazwa, np. ujecie-3-piwnica"},
+                                                       "jednostka": {"type": "string", "description": "czego dotyczy prompt, np. „ujęcie 3”, „karta postaci: Babka”, „temat muzyczny”"},
                                                        "tresc": {"type": "string"}}, "required": ["obszar", "nazwa", "tresc"]}}},
     {"type": "function", "function": {
         "name": "utworz_folder",
@@ -71,7 +72,7 @@ OPISY_EN = {
     "zapisz_sekcje": ("Saves ONE section “## heading” in an existing .md note (e.g. the piece bible): replaces its content or appends it at the end. The rest of the file stays unchanged. Only with the participant's consent.",
                       {"sciezka": "e.g. artefakty/fog-biblia.md", "naglowek": "section heading without ##, e.g. Sound", "tresc": "section content (without the heading)"}),
     "zapisz_prompt": ("Saves a finished generation prompt in artefakty/prompty/<area>/ — the participant takes it from the notes in the generation area. Only with the participant's consent. Content = the prompt itself (no comments, no list of sources).",
-                      {"nazwa": "short name, e.g. shot-3-cellar"}),
+                      {"nazwa": "short name, e.g. shot-3-cellar", "jednostka": "what the prompt is for, e.g. “shot 3”, “character sheet: Grandma”"}),
     "utworz_folder": ("Creates a folder (and subfolders) in the participant's artefakty/.", {}),
     "przenies_notatke": ("Moves or renames a .md note (within artefakty/).", {}),
     "szukaj_w_sieci": ("Searches the internet (inspirations, similar works, sources). Write the query yourself, short, with no personal data and without quoting the conversation.", {}),
@@ -185,7 +186,7 @@ def opis(nazwa: str, args: dict, jez: str = "pl") -> str:
     }.get(nazwa, lambda: nazwa)()
 
 
-async def wykonaj(login: str, nazwa: str, args: dict, jez: str = "pl") -> str:
+async def wykonaj(login: str, nazwa: str, args: dict, jez: str = "pl", kontekst: dict | None = None) -> str:
     try:
         if nazwa == "lista_plikow":
             p = _sciezka(login, args.get("sciezka", ""))
@@ -251,7 +252,10 @@ async def wykonaj(login: str, nazwa: str, args: dict, jez: str = "pl") -> str:
             if j:                                         # JSON (np. Ideogram) jako blok kodu — edytor notatek nie doda „\”
                 t = "```json\n" + j + "\n```"
             p.write_text(t + "\n", encoding="utf-8")
-            store.add_asset(login, "tekst", "artefakt", p, p.name, "tekst", None, None, {"zrodlo": "promptmaker", "obszar": ob},
+            k = kontekst or {}                          # opis promptu: lista w obszarze filtruje po modelu i utworze
+            store.add_asset(login, "tekst", "artefakt", p, p.name, "tekst", None, None,
+                            {"zrodlo": "promptmaker", "obszar": ob, "model": k.get("model"), "biblia": k.get("biblia"),
+                             "jednostka": (args.get("jednostka") or "").strip()[:80] or None},
                             ujecie_id=store.default_ujecie(login)["id"])
             return tx("zapisano", jez, p=store.rel(p))
         if nazwa == "utworz_folder":

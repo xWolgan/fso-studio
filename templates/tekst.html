@@ -35,6 +35,8 @@
         <select id="biblia"></select>
         <div class="chips tematy" id="tematy"></div>
         <div class="help" id="tematy-opis"></div></div>
+      <div class="field"><button class="btn" id="karty-btn" type="button">▦ {{ T.karty }}</button>
+        <div class="help">{{ T.karty_opis }}</div></div>
     </section>
     <section class="sec"><h3>{{ T.prompty_sys }}</h3>
       <div id="prompty"></div>
@@ -49,5 +51,5 @@
 {% block scripts %}
 <script src="/static/vendor/marked.min.js"></script>
 <script src="/static/vendor/purify.min.js"></script>
-<script src="/static/tekst.js?v=13"></script>
+<script src="/static/tekst.js?v=14"></script>
 {% endblock %}

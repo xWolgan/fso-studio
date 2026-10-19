@@ -47,6 +47,16 @@ async function kopiuj(tekst) {
 }
 const kopiujZToastem = async (tekst) => toast((await kopiuj(tekst)) ? T.skopiowano : T.nie_skopiowano);
 
+// Komunikat z przyciskiem (np. „Cofnij”) — dłużej widoczny niż zwykły toast.
+function toastAkcja(msg, etykieta, fn, ms = 6000) {
+  const t = h("div", { class: "toast z-akcja" }, h("span", {}, msg),
+    h("button", { class: "btn quiet", onclick: () => { fn(); t.remove(); } }, etykieta));
+  document.body.append(t);
+  setTimeout(() => t.remove(), ms);
+}
+// Krótkie podświetlenie pola — widać, że coś się w nim zmieniło.
+function blysk(el) { if (!el) return; el.classList.remove("blysk"); void el.offsetWidth; el.classList.add("blysk"); }
+
 function toast(msg) {
   const t = h("div", { class: "toast" }, msg);
   document.body.append(t);

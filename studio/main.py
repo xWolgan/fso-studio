@@ -41,6 +41,8 @@ async def tylko_ze_studia(req: Request, call_next):
 from . import tekst, prompty, ustawienia  # noqa: E402
 app.include_router(tekst.router)
 app.include_router(prompty.router)
+from . import karty  # noqa: E402
+app.include_router(karty.router)
 app.include_router(ustawienia.router)
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 tpl = Jinja2Templates(directory=ROOT / "templates")

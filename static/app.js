@@ -102,6 +102,41 @@ function selectModel(id, keep = false) {
   renderForm();
 }
 
+// Lista zapisanych promptów tego obszaru (dla wybranego modelu na górze) — wstawienie z „Cofnij”.
+async function listaPromptow(btn, ta, wpisz) {
+  document.querySelector(".pr-pop")?.remove();
+  const szukaj = h("input", { type: "text", placeholder: T.szukaj, spellcheck: "false" });
+  const lista = h("div", { class: "pr-lista" }, h("div", { class: "pr-puste" }, "…"));
+  const pop = h("div", { class: "pr-pop" }, h("div", { class: "pr-gora" }, szukaj,
+    h("button", { class: "btn quiet", onclick: () => pop.remove() }, "✕")), lista);
+  btn.closest(".field").append(pop);
+  const zamknij = (e) => { if (!pop.contains(e.target) && e.target !== btn) { pop.remove(); document.removeEventListener("mousedown", zamknij); } };
+  setTimeout(() => document.addEventListener("mousedown", zamknij), 0);
+  pop.addEventListener("keydown", (e) => { if (e.key === "Escape") pop.remove(); });
+  let ps = [];
+  try { ps = await api(`/api/prompty-obszaru?obszar=${OBSZAR}&model=${encodeURIComponent(state.model.id)}`); }
+  catch (e) { lista.replaceChildren(h("div", { class: "pr-puste" }, e.message)); return; }
+  const wstaw = async (p) => {
+    const a = await api("/api/artefakty/" + p.id);
+    let t = (a.tresc || "").trim();
+    t = jsonZTekstu(t) ?? czystyPrompt(t.replace(/^```\w*\n|\n```$/g, ""));
+    const poprzedni = ta.value;
+    wpisz(t); pop.remove(); ta.focus(); blysk(ta);
+    toastAkcja(tf("wstawiono", { n: p.nazwa }), T.cofnij, () => { wpisz(poprzedni); blysk(ta); });
+  };
+  const rysuj = () => {
+    const q = szukaj.value.trim().toLowerCase();
+    const w = ps.filter((p) => !q || [p.nazwa, p.podglad, p.jednostka, p.biblia].join(" ").toLowerCase().includes(q));
+    lista.replaceChildren(...(w.length ? w.map((p) => h("button", { class: "pr-item" + (p.ten_model ? "" : " inny"), type: "button", onclick: () => wstaw(p) },
+      h("div", { class: "pr-nazwa" }, p.nazwa, p.jednostka ? h("span", { class: "pr-meta" }, " · " + p.jednostka) : null),
+      h("div", { class: "pr-meta" }, [p.biblia, p.model_nazwa || (p.model ? p.model : T.prompty_bez_modelu), new Date(p.utworzone * 1000).toLocaleDateString(LOCALE)]
+        .filter(Boolean).join(" · ") + (p.ten_model ? "" : " · " + T.prompty_inny_model)),
+      h("div", { class: "pr-podglad" }, p.podglad)))
+      : [h("div", { class: "pr-puste" }, ps.length ? T.pusto : T.prompty_brak)]));
+  };
+  szukaj.oninput = rysuj; rysuj(); szukaj.focus();
+}
+
 function fieldFor(p) {
   const v = state.values[p.id];
   const set = (x) => { state.values[p.id] = x; pokazKoszt(); };
@@ -134,7 +169,11 @@ function fieldFor(p) {
       } catch (err) { msg.textContent = err.message; }
       finally { b.disabled = false; b.textContent = napis; }
     } }, "✦ " + T.opis_na_json) : null;
-    const przyciski = tplBtn || jsonBtn ? h("span", { style: "float:right;margin-top:-4px;display:flex;gap:4px" }, jsonBtn, tplBtn) : null;
+    const promptyBtn = h("button", { class: "btn quiet", type: "button", title: T.prompty_pomoc,
+      onclick: (e) => listaPromptow(e.currentTarget, ta, wpisz) }, "▤ " + T.prompty_btn);
+    api(`/api/prompty-obszaru?obszar=${OBSZAR}&model=${encodeURIComponent(state.model.id)}`).then((ps) => {
+      promptyBtn.textContent = "▤ " + T.prompty_btn + (ps.length ? ` (${ps.length})` : ""); }).catch(() => {});
+    const przyciski = h("span", { style: "float:right;margin-top:-4px;display:flex;gap:4px" }, promptyBtn, jsonBtn, tplBtn);
     return h("div", { class: "field" }, przyciski, h("label", {}, L(p.etykieta) || T.prompt), ta,
       p.json ? h("div", { class: "help" }, T.json_pomoc) : null, help);
   }
@@ -568,7 +607,10 @@ $("q").oninput = () => { clearTimeout(qTimer); qTimer = setTimeout(() => { state
   }
   try {
     const r = JSON.parse(localStorage.getItem("reuse") || "null");
-    if (r && r.obszar === OBSZAR) { localStorage.removeItem("reuse"); reuse(r); }
+    if (r && r.obszar === OBSZAR) {
+      localStorage.removeItem("reuse"); reuse(r);
+      if (r.komunikat) { renderForm(); setTimeout(() => { blysk($("prompt")); toast(r.komunikat); }, 100); }   // np. karta z Tekstu
+    }
   } catch (e) {}
   await loadThumbs();
   pollJobs();

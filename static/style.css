@@ -441,6 +441,27 @@ body[data-obszar]:not([data-obszar=""]) { background: var(--tint, var(--bg)); }
 .nl-lista li.on, .nl-lista li:hover { background: rgba(127,127,127,.1); color: var(--ink); }
 .nl-prawa { display: flex; flex-direction: column; min-height: 0; }
 .nl-pasek { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); } .nl-pasek .sp { flex: 1; }
+.field { position: relative; }
+.karty-okno { min-width: min(980px, 90vw); }
+.karty-dwie { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.karty-okno textarea { width: 100%; }
+.karty-wynik { font-family: var(--mono); font-size: 12.5px; }
+@media (max-width: 800px) { .karty-dwie { grid-template-columns: 1fr; } }
+.pr-pop { position: absolute; z-index: 30; top: 26px; right: 0; width: min(520px, 92vw); max-height: 420px; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.15); }
+.pr-gora { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--line); } .pr-gora input { flex: 1; }
+.pr-lista { overflow: auto; padding: 4px; }
+.pr-item { display: block; width: 100%; text-align: left; background: none; border: 0; border-radius: 6px; padding: 7px 9px; cursor: pointer; color: var(--ink); font: inherit; }
+.pr-item:hover { background: var(--accent-soft); }
+.pr-item.inny { opacity: .7; }
+.pr-nazwa { font-weight: 600; font-size: 13.5px; }
+.pr-meta { color: var(--muted); font-size: 12px; font-weight: normal; }
+.pr-podglad { color: var(--ink-2); font-size: 12.5px; white-space: pre-wrap; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-top: 2px; }
+.pr-puste { color: var(--muted); font-size: 13px; padding: 10px; }
+.toast.z-akcja { display: flex; align-items: center; gap: 10px; }
+.toast.z-akcja .btn { color: inherit; text-decoration: underline; padding: 0 4px; }
+@keyframes blysk { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: 0 0 0 0 transparent; } }
+.blysk { animation: blysk 1.2s ease-out; }
 .nl-decyzja { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--accent-soft); border-bottom: 1px solid var(--line); }
 .nl-decyzja[hidden] { display: none; } .nl-decyzja .sp { flex: 1; }
 .nl-nazwa { font-weight: 600; } .nl-stan { color: var(--muted); }

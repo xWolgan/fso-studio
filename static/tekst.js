@@ -306,6 +306,91 @@ async function doArtefaktu(tresc) {
 $("model").replaceChildren(...MODELS.map((m) => h("option", { value: m.id }, m.nazwa)));
 const opisModelu = () => { const m = MODELS.find((x) => x.id === $("model").value); $("model-opis").textContent = m ? L(m.opis) : ""; };
 $("model").onchange = opisModelu; opisModelu();
+// ---------- karty postaci i lokacji (sztywne, z biblii; jedna karta = jeden obraz) ----------
+const POLA_KART = { postac: ["tozsamosc", "stroj", "wyraz", "czynnosc"], lokacja: ["uklad", "materialy", "swiatlo"] };
+async function otworzKarty() {
+  const bs = await api("/api/biblie");
+  const modele = await api("/api/modele?obszar=obraz");
+  const k = { typ: "postac", biblia: st.biblia || bs[0]?.sciezka || "", dane: { postacie: [], lokacje: [], styl: "" } };
+  const selBiblia = h("select", {}, h("option", { value: "" }, T.karty_bez_biblii), ...bs.map((b) => h("option", { value: b.sciezka }, b.nazwa)));
+  selBiblia.value = k.biblia;
+  const typy = h("div", { class: "chips" });
+  const selWpis = h("select");
+  const nazwa = h("input", { type: "text", placeholder: T.karty_nazwa });
+  const pola = h("div");
+  const styl = h("textarea", { rows: 2, placeholder: T.karty_styl_pomoc });
+  const selModel = h("select", {}, ...modele.map((m) => h("option", { value: m.id }, m.nazwa)));
+  const wynik = h("textarea", { rows: 9, class: "karty-wynik", spellcheck: "false", placeholder: T.karty_wynik_pomoc });
+  const msg = h("span", { class: "msg" });
+  const ostatni = localStorage.getItem("karty:model");
+  if (ostatni && modele.some((m) => m.id === ostatni)) selModel.value = ostatni;
+
+  const rysujPola = (wartosci = {}) => {
+    pola.replaceChildren(...POLA_KART[k.typ].map((p) => h("div", { class: "field" }, h("label", {}, T["karty_" + p]),
+      h("textarea", { rows: 2, "data-pole": p }, wartosci[p] || ""))));
+  };
+  const rysujWpisy = () => {
+    const lista = k.typ === "postac" ? k.dane.postacie : k.dane.lokacje;
+    selWpis.replaceChildren(h("option", { value: "" }, T.karty_nowa), ...lista.map((x, i) => h("option", { value: i }, x.nazwa)));
+    selWpis.value = lista.length ? "0" : "";
+    wybierzWpis();
+  };
+  const wybierzWpis = () => {
+    const lista = k.typ === "postac" ? k.dane.postacie : k.dane.lokacje;
+    const x = lista[parseInt(selWpis.value)];
+    nazwa.value = x ? x.nazwa : ""; rysujPola(x ? x.pola : {});
+  };
+  const wczytajBiblie = async () => {
+    k.biblia = selBiblia.value;
+    k.dane = k.biblia ? await api("/api/karty?biblia=" + encodeURIComponent(k.biblia)) : { postacie: [], lokacje: [], styl: "" };
+    styl.value = k.dane.styl || ""; rysujWpisy();
+  };
+  for (const [t, et] of [["postac", T.karty_postac], ["lokacja", T.karty_lokacja]]) {
+    const c = h("button", { class: "chip" + (t === k.typ ? " on" : ""), type: "button" }, et);
+    c.onclick = () => { k.typ = t; typy.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === c)); wynik.value = ""; rysujWpisy(); };
+    typy.append(c);
+  }
+  selBiblia.onchange = wczytajBiblie; selWpis.onchange = wybierzWpis;
+  selModel.onchange = () => localStorage.setItem("karty:model", selModel.value);
+  const zbierz = () => Object.fromEntries([...pola.querySelectorAll("[data-pole]")].map((t) => [t.dataset.pole, t.value]));
+
+  const przygotuj = h("button", { class: "btn primary", type: "button" }, T.karty_przygotuj);
+  przygotuj.onclick = async () => {
+    msg.textContent = T.karty_tlumacze; przygotuj.disabled = true;
+    try { wynik.value = (await api("/api/karty/prompt", { method: "POST", body: JSON.stringify({ typ: k.typ, pola: zbierz(), styl: styl.value }) })).prompt; msg.textContent = ""; }
+    catch (e) { msg.textContent = e.message; }
+    finally { przygotuj.disabled = false; }
+  };
+  const zapisz = h("button", { class: "btn", type: "button", onclick: async () => {
+    if (!wynik.value.trim()) { msg.textContent = T.karty_najpierw; return; }
+    const r = await api("/api/karty/zapisz", { method: "POST", body: JSON.stringify({ typ: k.typ, nazwa: nazwa.value, prompt: wynik.value, model: selModel.value, biblia: k.biblia }) });
+    msg.textContent = r.ok ? T.karty_zapisano : r.info;
+    if (r.ok) document.dispatchEvent(new Event("notatki:zapisane"));
+  } }, T.karty_zapisz);
+  const doObrazu = h("button", { class: "btn", type: "button", onclick: () => {
+    if (!wynik.value.trim()) { msg.textContent = T.karty_najpierw; return; }
+    const m = modele.find((x) => x.id === selModel.value);
+    const ust = { prompt: wynik.value };
+    if (m?.parametry.some((p) => p.id === "proporcje" && (p.opcje || []).includes("3:2"))) ust.proporcje = "3:2";
+    localStorage.setItem("reuse", JSON.stringify({ obszar: "obraz", meta: { model: selModel.value, ustawienia: ust },
+                                                    komunikat: tf("karty_wstawiono", { n: nazwa.value || "—" }) }));
+    location.href = "/obraz";
+  } }, T.karty_do_obrazu + " →");
+
+  modal(T.karty, h("div", { class: "karty-okno" },
+    h("div", { class: "field" }, h("label", {}, T.biblia), selBiblia),
+    h("div", { class: "field" }, typy),
+    h("div", { class: "karty-dwie" },
+      h("div", {}, h("div", { class: "field" }, h("label", {}, T.karty_wpis), selWpis), h("div", { class: "field" }, h("label", {}, T.karty_nazwa_et), nazwa), pola,
+        h("div", { class: "field" }, h("label", {}, T.karty_styl), styl)),
+      h("div", {}, h("div", { class: "field" }, h("label", {}, T.karty_model), selModel),
+        h("p", { class: "hint" }, T.karty_jeden_obraz), przygotuj,
+        h("div", { class: "field", style: "margin-top:10px" }, h("label", {}, T.karty_prompt), wynik),
+        h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" }, zapisz, doObrazu, msg)))), { wide: true });
+  await wczytajBiblie();
+}
+$("karty-btn").onclick = otworzKarty;
+
 $("nowa").onclick = async () => { if (st.rozmowa && !st.rozmowa.wiadomosci.length && (st.rozmowa.tryb || "rozmowa") === st.tryb) { $("tresc").focus(); return; } const r = await api("/api/rozmowy", { method: "POST", body: JSON.stringify({ model: $("model").value, tryb: st.tryb }) }); await otworz(r.id); $("tresc").focus(); };
 $("biblia").onchange = async () => {
   st.biblia = $("biblia").value;
