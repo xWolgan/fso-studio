@@ -47,9 +47,19 @@ async function panelModeli(chips) {
   $("tematy-opis").textContent = T.prompt_opis;
 }
 
+// Otwarta rozmowa jest świeża (właśnie kliknięto „Nowa rozmowa”) — wtedy model / temat zakłada nową rozmowę,
+// a pusta znika; w innym wypadku wracamy do istniejącego wątku dla tego modelu / tematu.
+const swieza = () => Boolean(st.rozmowa && !(st.rozmowa.wiadomosci || []).length);
+async function usunPusta() {
+  if (!swieza()) return;
+  try { await api(`/api/rozmowy/${st.rozmowa.id}/usun`, { method: "POST" }); } catch (e) {}
+}
+
 async function otworzPrompt(mid) {
   const jest = st.lista.find((r) => r.tryb === "prompt" && r.biblia === st.biblia && r.model_docelowy === mid);
-  if (jest) return otworz(jest.id);
+  if (st.rozmowa?.tryb === "prompt" && st.rozmowa.model_docelowy === mid && st.rozmowa.biblia === st.biblia) return;   // już tu jesteśmy
+  if (jest && !swieza()) return otworz(jest.id);
+  await usunPusta();
   const r = await api("/api/rozmowy", { method: "POST", body: JSON.stringify({ model: $("model").value, tryb: "prompt", biblia: st.biblia, model_docelowy: mid }) });
   await otworz(r.id); $("tresc").focus();
 }
@@ -57,7 +67,10 @@ async function otworzPrompt(mid) {
 async function otworzTemat(temat, nazwa) {
   const jest = st.lista.find((r) => r.tryb === "lustro" && r.biblia === st.biblia && (r.temat || "") === (temat || "")
     && (temat !== "_inny" || r.temat_nazwa === nazwa));
-  if (jest) return otworz(jest.id);
+  if (st.rozmowa?.tryb === "lustro" && (st.rozmowa.temat || "") === (temat || "") && st.rozmowa.biblia === st.biblia
+      && (temat !== "_inny" || st.rozmowa.temat_nazwa === nazwa)) return;              // już tu jesteśmy
+  if (jest && !swieza()) return otworz(jest.id);
+  await usunPusta();
   const r = await api("/api/rozmowy", { method: "POST", body: JSON.stringify({ model: $("model").value, tryb: "lustro",
     biblia: st.biblia, temat: temat || null, temat_nazwa: nazwa || null }) });
   await otworz(r.id); $("tresc").focus();
