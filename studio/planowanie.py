@@ -86,7 +86,12 @@ def zaplanuj(oczekujace: list[dict], maszyny: dict, modele: dict, umie) -> tuple
         if m.busy:
             jb = store.job(m.busy) or {}
             md = modele.get(jb.get("model"))
-            koniec = (jb.get("start") or teraz) + (szacuj(md, json.loads(jb.get("wartosci") or "{}"), m, maszyny) if md else 60)
+            start = jb.get("start") or teraz
+            koniec = start + (szacuj(md, json.loads(jb.get("wartosci") or "{}"), m, maszyny) if md else 60)
+            if koniec < teraz:
+                # zadanie trwa dłużej niż szacunek — nie udawajmy, że maszyna zaraz będzie wolna (wtedy cała kolejka
+                # czekała na nią, a druga maszyna stała): zakładamy jeszcze co najmniej połowę przekroczenia, min. minutę
+                koniec = teraz + max(60.0, (teraz - koniec) * 0.5)
             wolna_od[m.id] = max(teraz + 5, koniec)
         else:
             wolna_od[m.id] = teraz

@@ -452,7 +452,7 @@ async function submit() {
   try {
     // model lokalny z wersją w API: gdy samo zadanie potrwa długo, uczestnik wybiera — lokalnie (za darmo) czy API (z budżetu)
     const w = state.model.zapas_api ? await api("/api/wycena", { method: "POST", body: JSON.stringify({ model: state.model.id, wartosci: state.values, wejscia: state.inputs, ile: state.ile }) }) : null;
-    if (w && w.zapasy?.length && w.czas_s != null && w.czas_s > w.prog_s) wyborApi(w, wyslij);
+    if (w && w.zapasy?.length && Math.max(w.eta_s ?? 0, w.czas_s ?? 0) > w.prog_s) wyborApi(w, wyslij);
     else await wyslij(false);
   } catch (e) { msg.textContent = e.message; }
   finally { setTimeout(() => (btn.disabled = false), 400); }
