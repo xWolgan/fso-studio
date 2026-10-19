@@ -32,6 +32,21 @@ function h(tag, attrs = {}, ...kids) {
   return e;
 }
 
+// Schowek: navigator.clipboard działa tylko na https / localhost — uczestnicy wchodzą przez http://<adres w sieci>,
+// więc zapasowo kopiujemy przez ukryte pole i execCommand. Zwraca, czy się udało (toast mówi prawdę).
+async function kopiuj(tekst) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(tekst); return true; }
+  } catch (e) {}
+  const ta = h("textarea", { readonly: true, style: "position:fixed;top:-1000px;left:0;opacity:0" });
+  ta.value = tekst; document.body.append(ta); ta.select(); ta.setSelectionRange(0, tekst.length);
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (e) {}
+  ta.remove();
+  return ok;
+}
+const kopiujZToastem = async (tekst) => toast((await kopiuj(tekst)) ? T.skopiowano : T.nie_skopiowano);
+
 function toast(msg) {
   const t = h("div", { class: "toast" }, msg);
   document.body.append(t);

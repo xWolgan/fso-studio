@@ -441,6 +441,8 @@ body[data-obszar]:not([data-obszar=""]) { background: var(--tint, var(--bg)); }
 .nl-lista li.on, .nl-lista li:hover { background: rgba(127,127,127,.1); color: var(--ink); }
 .nl-prawa { display: flex; flex-direction: column; min-height: 0; }
 .nl-pasek { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); } .nl-pasek .sp { flex: 1; }
+.nl-decyzja { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--accent-soft); border-bottom: 1px solid var(--line); }
+.nl-decyzja[hidden] { display: none; } .nl-decyzja .sp { flex: 1; }
 .nl-nazwa { font-weight: 600; } .nl-stan { color: var(--muted); }
 .nl-ed { flex: 1; min-height: 0; }
 .nl-ed .toastui-editor-defaultUI { border: 0; }

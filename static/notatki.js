@@ -1,7 +1,14 @@
 // Notatki .md — wysuwany z boku edytor (w stylu Typory: pisze się na czysto), dostępny w każdym obszarze.
 // Pliki to artefakty uczestnika (zasoby/<login>/artefakty/*.md): widoczne w innych obszarach i w galerii.
 const notatki = (() => {
-  let panel, ed, biezacy = null, zmiany = false, ladowanie = null;
+  let panel, ed, biezacy = null, zapisany = "", ladowanie = null;
+  // zmiany = treść różni się od zapisanej (edytor zgłasza „zmianę” już przy wczytaniu — tamtym sygnałom nie ufamy)
+  const zmienione = () => Boolean(biezacy && ed && ed.getMarkdown() !== zapisany);
+  let wczytuje = false;   // edytor normalizuje treść chwilę po wczytaniu — to nie jest zmiana użytkownika
+  const ustawZapisany = () => {
+    wczytuje = true; zapisany = ed.getMarkdown();
+    setTimeout(() => { zapisany = ed.getMarkdown(); wczytuje = false; panel._stan.textContent = ""; }, 120);
+  };
 
   const ciemny = () => matchMedia("(prefers-color-scheme: dark)").matches;
   function zaladujEdytor() {
@@ -23,20 +30,23 @@ const notatki = (() => {
     const zmien = h("button", { class: "btn quiet", title: T.zmien_nazwe, onclick: zmienNazwe, hidden: true }, "✎");
     const stan = h("span", { class: "nl-stan" });
     const pole = h("div", { class: "nl-ed" });
+    const decyzja = h("div", { class: "nl-decyzja", hidden: true });
     panel = h("aside", { class: "notatki" },
       h("div", { class: "nl-head" }, h("b", {}, T.notatki), h("span", { class: "sp" }),
         h("button", { class: "btn quiet", onclick: nowa }, "+ " + T.nowa_notatka),
-        h("button", { class: "btn quiet", onclick: zamknij }, "✕")),
+        h("button", { class: "btn quiet", title: T.zamknij_panel, onclick: zamknij }, "✕")),
+      decyzja,
       h("div", { class: "nl-body" }, lista,
         h("div", { class: "nl-prawa" },
           h("div", { class: "nl-pasek" }, nazwa, zmien, stan, h("span", { class: "sp" }),
             h("button", { class: "btn quiet", title: T.wstaw_do_promptu, onclick: wstaw }, "↙ " + T.wstaw_do_promptu),
             h("button", { class: "btn", onclick: zapisz }, T.zapisz)),
           pole)));
-    panel._lista = lista; panel._nazwa = nazwa; panel._stan = stan; panel._pole = pole; panel._zmien = zmien;
+    panel._lista = lista; panel._nazwa = nazwa; panel._stan = stan; panel._pole = pole; panel._zmien = zmien; panel._decyzja = decyzja;
     document.body.append(panel);
     document.addEventListener("keydown", (e) => {
       if (panel.classList.contains("on") && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); zapisz(); }
+      if (panel.classList.contains("on") && e.key === "Escape" && panel._decyzja.hidden && !document.querySelector(".modal-back")) zamknij();
     });
   }
 
@@ -60,17 +70,36 @@ const notatki = (() => {
       ed = new toastui.Editor({ el: panel._pole, height: "100%", initialEditType: "wysiwyg", hideModeSwitch: false,
         previewStyle: "tab", usageStatistics: false, theme: ciemny() ? "dark" : "light",
         toolbarItems: [["heading", "bold", "italic", "strike"], ["ul", "ol", "quote"], ["link"]] });
-      ed.on("change", () => { zmiany = true; panel._stan.textContent = "•"; });
+      ed.on("change", () => { if (!wczytuje) panel._stan.textContent = zmienione() ? "•" : ""; });
     }
     odswiezListe();
   }
 
+  // Pytanie w samym panelu (okienka przeglądarki bywają zablokowane — wtedy panel nie dawał się zamknąć).
+  function pytaj(tekst, opcje) {
+    return new Promise((ok) => {
+      const d = panel._decyzja;
+      d.replaceChildren(h("span", {}, tekst), h("span", { class: "sp" }),
+        ...opcje.map(([k, etykieta, glowny]) => h("button", { class: "btn" + (glowny ? " primary" : " quiet"),
+          onclick: () => { d.hidden = true; ok(k); } }, etykieta)));
+      d.hidden = false;
+    });
+  }
+
+  // Niezapisane zmiany przed przejściem dalej: true = można iść dalej.
+  async function rozstrzygnij(tekst) {
+    if (!zmienione()) return true;
+    const k = await pytaj(tekst, [["zapisz", T.zapisz, true], ["porzuc", T.porzuc], ["anuluj", T.anuluj]]);
+    if (k === "zapisz") { await zapisz(); return true; }
+    return k === "porzuc";
+  }
+
   async function otworz(id) {
     await pokaz();
-    if (zmiany && biezacy && !confirm(T.porzucic_zmiany)) return;
+    if (!(await rozstrzygnij(T.porzucic_zmiany))) return;
     const a = await api("/api/artefakty/" + id);
     ed.changeMode("wysiwyg", true);
-    biezacy = a; ed.setMarkdown(a.tresc || ""); zmiany = false;
+    biezacy = a; ed.setMarkdown(a.tresc || ""); ustawZapisany();
     panel._nazwa.textContent = a.nazwa.replace(/\.md$/, ""); panel._stan.textContent = "";
     panel._zmien.hidden = a.login !== window.LOGIN;
     odswiezListe();
@@ -95,25 +124,26 @@ const notatki = (() => {
     if (nazwa === null) return;
     const a = await api("/api/artefakty", { method: "POST", body: JSON.stringify({ nazwa, tresc: "",
       ujecie: parseInt(localStorage.getItem("ujecie") || "0") || null }) });
-    zmiany = false; await otworz(a.id);
+    await otworz(a.id);
     document.dispatchEvent(new Event("notatki:zapisane"));
   }
 
   // Tekst spoza artefaktów (np. kopia promptu systemowego): surowy markdown, zapis przez podaną funkcję.
   async function edytujTekst({ tytul, tresc, zapisz: fn }) {
     await pokaz();
-    if (zmiany && biezacy && !confirm(T.porzucic_zmiany)) return;
+    if (!(await rozstrzygnij(T.porzucic_zmiany))) return;
     ed.changeMode("markdown", true);
-    biezacy = { zewn: fn }; ed.setMarkdown(tresc || ""); zmiany = false;
+    biezacy = { zewn: fn }; ed.setMarkdown(tresc || ""); ustawZapisany();
     panel._nazwa.textContent = tytul; panel._stan.textContent = ""; panel._zmien.hidden = true;
     odswiezListe();
   }
 
   async function zapisz() {
     if (!biezacy || !ed) return;
-    if (biezacy.zewn) { await biezacy.zewn(ed.getMarkdown()); zmiany = false; panel._stan.textContent = ""; toast(T.zapisano); return; }
-    await api("/api/artefakty/" + biezacy.id, { method: "POST", body: JSON.stringify({ tresc: ed.getMarkdown() }) });
-    zmiany = false; panel._stan.textContent = ""; toast(T.zapisano);
+    const tresc = ed.getMarkdown();
+    if (biezacy.zewn) { await biezacy.zewn(tresc); zapisany = tresc; panel._stan.textContent = ""; toast(T.zapisano); return; }
+    await api("/api/artefakty/" + biezacy.id, { method: "POST", body: JSON.stringify({ tresc }) });
+    zapisany = tresc; panel._stan.textContent = ""; toast(T.zapisano);
     document.dispatchEvent(new Event("notatki:zapisane"));
   }
 
@@ -131,17 +161,28 @@ const notatki = (() => {
   // Agent mógł właśnie zmienić otwarty plik (np. biblię) — wczytaj świeżą wersję, jeśli nie ma niezapisanych zmian.
   async function odswiezBiezacy() {
     if (!panel || !biezacy?.id || biezacy.zewn) return;
-    if (zmiany) { panel._stan.textContent = T.plik_zmieniony; return; }
+    if (zmienione()) { panel._stan.textContent = T.plik_zmieniony; return; }
     const a = await api("/api/artefakty/" + biezacy.id);
-    if ((a.tresc || "") !== ed.getMarkdown()) { biezacy = a; ed.setMarkdown(a.tresc || ""); zmiany = false; panel._stan.textContent = ""; }
+    if ((a.tresc || "") !== ed.getMarkdown()) { biezacy = a; ed.setMarkdown(a.tresc || ""); ustawZapisany(); panel._stan.textContent = ""; }
   }
 
-  function zamknij() {
-    if (zmiany && !confirm(T.zamknac_bez_zapisu)) return;
+  async function zamknij() {
+    if (!panel) return;
+    if (zmienione()) {
+      const k = await pytaj(T.zamknac_bez_zapisu, [["zapisz", T.zapisz_i_zamknij, true], ["porzuc", T.zamknij_bez_zapisu], ["anuluj", T.anuluj]]);
+      if (k === "anuluj") return;
+      if (k === "zapisz") await zapisz();
+      else { ed.setMarkdown(zapisany); }            // porzucone zmiany nie wracają przy następnym otwarciu
+    }
+    panel._decyzja.hidden = true;
     panel.classList.remove("on");
   }
 
-  return { pokaz, otworz, nowa, zamknij, edytujTekst, odswiezBiezacy };
+  const otwarty = () => Boolean(panel && panel.classList.contains("on"));
+  return { pokaz, otworz, nowa, zamknij, edytujTekst, odswiezBiezacy, otwarty };
 })();
 
-document.querySelectorAll("[data-notatki]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); notatki.pokaz(); }));
+// link „notatki” w nagłówku: otwiera i zamyka
+document.querySelectorAll("[data-notatki]").forEach((a) => a.addEventListener("click", (e) => {
+  e.preventDefault(); notatki.otwarty() ? notatki.zamknij() : notatki.pokaz();
+}));

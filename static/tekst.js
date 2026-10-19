@@ -180,13 +180,13 @@ function wiadomosc(w) {
     const kod = pre.querySelector("code") || pre;
     pre.classList.add("z-kopiuj");
     pre.append(h("button", { class: "btn quiet kopiuj-kod", type: "button", title: T.kopiuj_kod_pomoc,
-      onclick: () => { navigator.clipboard?.writeText(kod.textContent.replace(/\n$/, "")); toast(T.skopiowano); } }, T.kopiuj));
+      onclick: () => kopiujZToastem(kod.textContent.replace(/\n$/, "")) }, T.kopiuj));
   });
   if (w.zalaczniki?.length) el.append(zalWiadomosci(w.zalaczniki));
   if (w.rola === "assistant") {
     el.append(h("div", { class: "w-akcje" },
       h("button", { class: "btn quiet", title: T.zaznacz_aby, onclick: () => doArtefaktu(zaznaczenie(el) || w.tresc) }, "↓ " + T.do_artefaktu),
-      h("button", { class: "btn quiet", onclick: () => { navigator.clipboard?.writeText(zaznaczenie(el) || w.tresc); toast(T.skopiowano); } }, T.kopiuj),
+      h("button", { class: "btn quiet", onclick: () => kopiujZToastem(zaznaczenie(el) || w.tresc) }, T.kopiuj),
       w.czas_s ? h("span", { class: "czas" }, w.czas_s + " s") : null));
   }
   return el;
